@@ -1,4 +1,3 @@
-
 test_that("`interpolate_opts` errors on invalid inputs.", {
   notfun <- 5
   noargsfun <- function() print()
@@ -26,7 +25,11 @@ test_that("`interpolate_opts` works for valid inputs.", {
   expect_no_error(interpolate_opts(okayfun))
   expect_no_error(interpolate_opts(okayfun, kind = "integral"))
   expect_no_error(interpolate_opts(complexfun, kind = "integral"))
-  expect_no_error(interpolate_opts(complexfun, kind = "integral", other = otherval))
+  expect_no_error(interpolate_opts(
+    complexfun,
+    kind = "integral",
+    other = otherval
+  ))
 
   res <- expect_no_error(interpolate_opts(complexfun, other = otherval))
   expect_equal(res$fun, complexfun)
@@ -36,7 +39,6 @@ test_that("`interpolate_opts` works for valid inputs.", {
   res <- expect_no_error(interpolate_opts(usekindfun))
   expect_equal(res$fun, usekindfun)
   expect_true(res$`.usekind`)
-
 })
 
 test_that("`interpolate_opts` works iteratively", {

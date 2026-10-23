@@ -1,15 +1,11 @@
-
-utils::globalVariables(c(
-  "weight", "relpop", "model_partition", "output_partition", "model_fraction"
-))
-
 #' @keywords internal
+#' @noRd
 vec_integrate <- function(f, lowers, uppers, ...) {
   integrals <- numeric(length(lowers))
   for (i in seq_along(lowers)) {
     integrals[i] <- integrate(f, lowers[i], uppers[i], ...)$value
   }
-  return(integrals)
+  integrals
 }
 
 #' @title Create the Blending and Distilling Object
@@ -104,21 +100,25 @@ vec_integrate <- function(f, lowers, uppers, ...) {
 #' @importFrom stats integrate
 #' @import data.table
 #' @export
+#' @autoglobal
 alembic <- function(
-    f_param,
-    f_pop,
-    model_partition,
-    output_partition,
-    pars_interp_opts = interpolate_opts(
-      fun = stats::splinefun, kind = "point",
-      method = "natural"
-    ),
-    pop_interp_opts = interpolate_opts(
-      fun = stats::approxfun, kind = "integral",
-      method = "constant", yleft = 0, yright = 0
-    )
+  f_param,
+  f_pop,
+  model_partition,
+  output_partition,
+  pars_interp_opts = interpolate_opts(
+    fun = stats::splinefun,
+    kind = "point",
+    method = "natural"
+  ),
+  pop_interp_opts = interpolate_opts(
+    fun = stats::approxfun,
+    kind = "integral",
+    method = "constant",
+    yleft = 0,
+    yright = 0
+  )
 ) {
-
   # create the mixing partition: this the union of the model and output
   # partitions. We define an internal function here which also does a variety
   # of error handling, but ultimately provides the union of these inputs when
@@ -153,15 +153,15 @@ alembic <- function(
   ret <- data.table(
     model_partition = model_partition[which_model_part],
     output_partition = output_partition[which_out_part],
-    weight = weight, relpop = relpop
+    weight = weight,
+    relpop = relpop
   )
 
   # capture the functional forms with the mixing table
   setattr(ret, "f_param", f_param)
   setattr(ret, "f_pop", f_pop)
 
-  return(ret)
-
+  ret
 }
 
 #' @title Blend Parameters
@@ -216,6 +216,7 @@ alembic <- function(
 #'   type = "s", col = "darkgreen"
 #' )
 #' @export
+#' @autoglobal
 blend <- function(
   alembic_dt
 ) {
@@ -225,7 +226,10 @@ blend <- function(
   # weight i = integral_{c i}^{c i + 1} parameter(x)*rho(x) dx
   # relpop i = integral_{c i}^{c i + 1} rho(x) dx
   # i.e., the weighted average of the parameter
-  return(alembic_dt[, .(value = sum(weight) / sum(relpop)), keyby = model_partition])
+  alembic_dt[,
+    .(value = sum(weight) / sum(relpop)),
+    keyby = model_partition
+  ]
 }
 
 #' @title Distill Outcomes
@@ -257,6 +261,7 @@ blend <- function(
 #'
 #' @import data.table
 #' @export
+#' @autoglobal
 #' @examplesIf require(data.table)
 #'
 #' ifr_levin <- function(age_in_years) {
@@ -276,14 +281,18 @@ blend <- function(
 #' results$value <- 10
 #' distill(alembic_dt, results)
 distill <- function(
-  alembic_dt, outcomes_dt, groupcol = names(outcomes_dt)[1]
+  alembic_dt,
+  outcomes_dt,
+  groupcol = names(outcomes_dt)[1]
 ) {
-
   # compute the relative contribution of model partition j to output partition i
   # which is weight i / sum of all the weights in j
-  mapping <- alembic_dt[, .(
-    output_partition, model_fraction = weight / sum(weight)
-    ), keyby = model_partition
+  mapping <- alembic_dt[,
+    .(
+      output_partition,
+      model_fraction = weight / sum(weight)
+    ),
+    keyby = model_partition
   ]
 
   # these next steps deal with error handling for the outcomes that need
@@ -292,27 +301,24 @@ distill <- function(
   uniqgroups <- outcomes_dt[, unique(model_partition)]
   uniqalemb <- alembic_dt[, unique(model_partition)]
 
-  if (length(setdiff(uniqgroups, uniqalemb))) {
-    stop(sprintf(
-      "`outcomes_dt[[%s]] has groups not present in `alembic_dt$model_partition`: %s",
-      groupcol,
-      toString(setdiff(uniqgroups, uniqalemb))
-    ))
-  }
-  if (length(setdiff(uniqalemb, uniqgroups))) {
-    warning(sprintf(
-      "`outcomes_dt[[%s]] does not cover the groups present in `alembic_dt$model_partition`: missing %s",
-      groupcol,
-      toString(setdiff(uniqalemb, uniqgroups))
-    ))
-  }
+  stop_fmt_if(
+    length(setdiff(uniqgroups, uniqalemb)) > 0L,
+    ERR_OUTCOMES_EXTRA_GROUPS,
+    groupcol = groupcol,
+    groups = toString(setdiff(uniqgroups, uniqalemb))
+  )
+  warn_fmt_if(
+    length(setdiff(uniqalemb, uniqgroups)) > 0L,
+    MSG_OUTCOMES_MISSING_GROUPS,
+    groupcol = groupcol,
+    groups = toString(setdiff(uniqalemb, uniqgroups))
+  )
 
   # if the outcomes have the proper shape, then join the mapping weights, then
   # for each output partition, sum the associated model outcomes according to
   # weighted contribution
-  return(outcomes_dt[mapping, on = .(model_partition)][,
+  outcomes_dt[mapping, on = .(model_partition)][,
     .(value = sum(value * model_fraction)),
     by = output_partition
-  ])
-
+  ]
 }

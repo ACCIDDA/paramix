@@ -15,20 +15,32 @@ Description: A convenient framework for aggregating and disaggregating continuou
     (for example, as needed when calculating age-sensitive measures like years-life-lost).
 License: MIT + file LICENSE
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
-Depends: R (>= 3.5.0)
-Suggests:
-    lintr,
-    knitr,
-    rmarkdown,
+Language: en-US
+Roxygen: list(markdown = TRUE, roclets = c("namespace", "rd",
+    "roxyglobals::global_roclet"))
+RoxygenNote: 7.3.3
+Depends: R (>= 4.1.0)
+Suggests: 
+    covr,
+    devtools,
     ggplot2,
+    knitr,
+    lintr,
+    patchwork,
+    pkgdown,
+    pkgload,
+    rmarkdown,
     roxygen2,
-    wpp2019,
+    roxyglobals,
+    spelling,
     testthat (>= 3.0.0),
-    patchwork
+    withr,
+    wpp2019
 VignetteBuilder: knitr
 Imports: 
     data.table
 Config/testthat/edition: 3
 URL: https://cmmid.github.io/paramix/
+BugReports: https://github.com/cmmid/paramix/issues
+Config/roxyglobals/filename: globals.R
+Config/roxyglobals/unique: FALSE

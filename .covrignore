@@ -1,0 +1,6 @@
+# covr exclusion patterns. Matches gitignore-style globs against paths
+# relative to the package root. See:
+# https://cran.r-project.org/web/packages/covr/readme/README.html
+
+R/globals.R
+inst/analysis
