@@ -14,36 +14,6 @@ The `paramix` package provides convenient functions to create both the correct a
 remotes::install_github("cmmid/paramix")
 ```
 
-## Demo Analysis
-
-In addition to the vignette introductory analysis, we provide a more extensive analysis pipeline, divided into stages and linked together via GNUMake. You will also need to have the R package `renv` installed.
-
-You can create a copy of this pipeline from an R console:
-
-```r
-path_to_destination <- file.path("~", "Downloads", "paramixdemo") # or wherever
-if (!dir.exists(path_to_destination)) { # if needed, create the directory
-  dir.create(path_to_destination, recursive = TRUE)
-}
-# get the analysis pipeline
-system.file("analysis", package = "paramix") |>
-  list.files(full.names = TRUE, recursive = FALSE, include.dirs = TRUE) |>
-  file.copy(
-    from = _,
-    to = path_to_destination,
-    recursive = TRUE
-  )
-# should be a bunch of TRUEs indicating the files copied successfully
-```
-
-then go to where you created the copy and run the `make` command:
-
-```bash
-~/Downloads/paramixdemo$ make
-```
-
-This should result in a fair bit of environment setup (to ensure setup for reproducibility)
-
 ## Usage
 
 Briefly, there are three steps:
@@ -51,3 +21,17 @@ Briefly, there are three steps:
  - create a translation object (`alembic`) based on the parameter function (e.g. the infection fatality ratio as a function of age), the density distribution of the pertinent feature (e.g. the population age pyramid), the model partitions of the feature (e.g. age groups), and the post-processing partitions of the feature (e.g. age in years).
  - create model parameters (`blend`) from the alembic
  - apply the alembic to model results (`distill`) to impute higher resolution outcomes
+
+## Reproducing the Paper Analysis
+
+We describe the methodology and applications of `paramix` in:
+
+> Goodfellow L, Pearson CAB, Procter SR (2025). "paramix: An R package for parameter discretisation in compartmental models, with application to calculating years of life lost." *PLOS Computational Biology*, 21(9): e1013420. <https://doi.org/10.1371/journal.pcbi.1013420>
+
+To reproduce the complete simulation study, figures, and numerical results from the paper using the bundled GNU Make and `renv` pipeline, see the vignette:
+
+```r
+vignette("reproducing-paper-analysis", package = "paramix")
+```
+
+or read the [online reproduction vignette](https://accidda.github.io/paramix/articles/reproducing-paper-analysis.html).

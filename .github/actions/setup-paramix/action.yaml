@@ -34,6 +34,16 @@ runs:
         r-version: ${{ inputs.r-version }}
         use-public-rspm: true
 
+    - name: Configure macOS toolchain
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install gettext || true
+        mkdir -p ~/.R
+        GETTEXT_PREFIX=$(brew --prefix gettext 2>/dev/null || echo "/opt/homebrew/opt/gettext")
+        echo "CPPFLAGS += -I${GETTEXT_PREFIX}/include -I/opt/homebrew/include" >> ~/.R/Makevars
+        echo "LDFLAGS += -L${GETTEXT_PREFIX}/lib -L/opt/homebrew/lib" >> ~/.R/Makevars
+
     - name: Setup just
       uses: extractions/setup-just@v2
 

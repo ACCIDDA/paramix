@@ -1,0 +1,16 @@
+bibentry(
+  bibtype = "Article",
+  title = "paramix: An R package for parameter discretisation in compartmental models, with application to calculating years of life lost",
+  author = c(
+    person("Lucy", "Goodfellow"),
+    person("Carl A. B.", "Pearson"),
+    person("Simon R.", "Procter")
+  ),
+  journal = "PLOS Computational Biology",
+  year = "2025",
+  volume = "21",
+  number = "9",
+  pages = "e1013420",
+  doi = "10.1371/journal.pcbi.1013420",
+  url = "https://doi.org/10.1371/journal.pcbi.1013420"
+)
