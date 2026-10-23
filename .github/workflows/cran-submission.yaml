@@ -1,0 +1,107 @@
+name: CRAN submission
+
+on:
+  release:
+    types: [prereleased]
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "CONFIRM" to submit manually (skip via release: prereleased otherwise)'
+        required: true
+        default: ''
+
+permissions:
+  contents: write  # required to create candidate release tags and upload release assets
+  issues: write    # so the action can create a tracking issue with submission status
+
+jobs:
+  news-version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Warn if NEWS.md is missing the version heading
+        run: |
+          if [ ! -f NEWS.md ]; then
+            echo "::warning::NEWS.md not found at repo root. CRAN convention is to ship one."
+            exit 0
+          fi
+          VERSION=$(grep -E '^Version:' DESCRIPTION | sed -E 's/Version:[[:space:]]*//')
+          if grep -qE "^# paramix[[:space:]]+$VERSION([[:space:]]|$)" NEWS.md; then
+            echo "NEWS.md heading found for version $VERSION."
+          else
+            echo "::warning::NEWS.md has no '# paramix $VERSION' heading. Add one before the release lands on CRAN."
+          fi
+
+  submit:
+    needs: news-version-sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup paramix CI environment
+        uses: ./.github/actions/setup-paramix
+        with:
+          extra-packages: any::rcmdcheck, any::roxygen2, any::roxyglobals, any::pkgload
+          needs: check
+
+      - name: Build package source tarball
+        id: build-tarball
+        shell: bash
+        run: |
+          VERSION=$(grep -E '^Version:' DESCRIPTION | sed -E 's/Version:[[:space:]]*//')
+          PKG=$(grep -E '^Package:' DESCRIPTION | sed -E 's/Package:[[:space:]]*//')
+          echo "Building source tarball for ${PKG} v${VERSION}..."
+          R CMD build --compact-vignettes=both .
+          TARBALL="${PKG}_${VERSION}.tar.gz"
+          if [ ! -f "$TARBALL" ]; then
+            TARBALL=$(ls -1 *.tar.gz 2>/dev/null | head -n 1)
+          fi
+          echo "Built tarball: $TARBALL"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "pkg=$PKG" >> "$GITHUB_OUTPUT"
+
+      - name: Submit to CRAN
+        uses: coatless-actions/cran-submission@v1
+        with:
+          pkg-directory: '.'
+          check-directory: 'check'
+          error-on: 'warning'
+          confirmation: ${{ github.event.inputs.confirmation }}
+
+      - name: Create or overwrite candidate release tag
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.build-tarball.outputs.version }}"
+          PKG="${{ steps.build-tarball.outputs.pkg }}"
+          TARBALL="${{ steps.build-tarball.outputs.tarball }}"
+          TAG_NAME="v${VERSION}-candidate"
+          RELEASE_TITLE="${PKG} v${VERSION} (CRAN Submission Candidate)"
+          
+          echo "Creating / updating candidate release tag: $TAG_NAME"
+          
+          # If the release tag already exists (e.g. resubmission), force update the git tag and overwrite asset
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Candidate release $TAG_NAME exists. Force-updating git tag to commit ${{ github.sha }} and replacing tarball..."
+            git tag -f "$TAG_NAME" "${{ github.sha }}"
+            git push --force origin "$TAG_NAME"
+            
+            gh release edit "$TAG_NAME" \
+              --title "$RELEASE_TITLE" \
+              --notes "CRAN submission candidate built and submitted on $(date -u +'%Y-%m-%d %H:%M:%S UTC') from commit ${{ github.sha }} (Workflow run #${{ github.run_number }})." \
+              --prerelease
+            gh release upload "$TAG_NAME" "$TARBALL" --clobber
+          else
+            echo "Creating new candidate pre-release $TAG_NAME with built source tarball..."
+            gh release create "$TAG_NAME" "$TARBALL" \
+              --title "$RELEASE_TITLE" \
+              --notes "CRAN submission candidate built and submitted on $(date -u +'%Y-%m-%d %H:%M:%S UTC') from commit ${{ github.sha }} (Workflow run #${{ github.run_number }})." \
+              --prerelease \
+              --target "${{ github.sha }}"
+          fi

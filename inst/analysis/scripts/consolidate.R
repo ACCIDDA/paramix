@@ -1,10 +1,13 @@
-
 require(data.table)
 
-.args <- if (interactive()) c(
-  list.files("output", "^yll", full.names = TRUE),
-  file.path("output", "consolidated.rds")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    list.files("output", "^yll", full.names = TRUE),
+    file.path("output", "consolidated.rds")
+  )
+} else {
+  commandArgs(trailingOnly = TRUE)
+}
 
 yll_dt <- head(.args, -1) |> lapply(readRDS) |> rbindlist(idcol = TRUE)
 scenario <- head(.args, -1) |> gsub(".*_(.*)_(.*)\\.rds$", "\\1 \\2", x = _)

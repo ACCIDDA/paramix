@@ -1,10 +1,13 @@
-
 require(data.table)
 
-.args <- if (interactive()) c(
-  list.files("output", "^sim_", full.names = TRUE),
-  file.path("output", "incidence.rds")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    list.files("output", "^sim_", full.names = TRUE),
+    file.path("output", "incidence.rds")
+  )
+} else {
+  commandArgs(trailingOnly = TRUE)
+}
 
 relargs <- head(.args, -1)
 

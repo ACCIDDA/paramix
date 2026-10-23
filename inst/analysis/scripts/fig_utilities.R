@@ -1,13 +1,16 @@
-
 require(ggplot2)
 
 # the `trap` pattern here let's us source this file interactively
 # without having to rm(list = ls()) to avoid leaking unwanted objects into
 # our resulting file
 
-.args <- if (interactive()) c(
-  file.path("figure", "fig_utilities.rda")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    file.path("figure", "fig_utilities.rda")
+  )
+} else {
+  commandArgs(trailingOnly = TRUE)
+}
 
 #' Generic Function Wrapper
 #'
@@ -27,113 +30,87 @@ require(ggplot2)
 #'
 #'
 #' @return the new function
-rejig <- function(FUN, ..., .ENV = environment(FUN)) {
+rejig <- function(fn, ..., env = environment(fn)) {
   # initial validation
   stopifnot(
-    "FUN isn't a function." = is.function(FUN),
-    "FUN is a primitive function." = !is.primitive(FUN)
+    "fn isn't a function." = is.function(fn),
+    "fn is a primitive function." = !is.primitive(fn)
   )
 
   dots <- as.list(match.call())[-1] # get some new defaults
-  dots$FUN <- dots$.ENV <- NULL # drop all the not-defaults
+  dots$fn <- dots$env <- NULL # drop all the not-defaults
 
   if (length(dots) == 0) {
-    warning("... is empty. Just returning FUN.")
-    return(FUN)
+    warning("... is empty. Just returning fn.")
+    return(fn)
   }
 
-  .FUN <- FUN # make a duplicate of FUN
-  forms <- formals(FUN) # get the original defaults
+  fn_copy <- fn # make a duplicate of fn
+  forms <- formals(fn) # get the original defaults
 
   # potentially more validation: check for ... argument
-  # in FUN and try to partial match all arguments in
+  # in fn and try to partial match all arguments in
   # rejig
   hasdots <- "..." %in% names(forms)
   replacements <- names(forms)[pmatch(names(dots), names(forms))]
 
   if (any(is.na(replacements)) && !hasdots) {
-    errmsg <- sprintf("
-FUN does not have ... argument, and
-rejig ... arguments do not match FUN arguments:
+    errmsg <- sprintf(
+      "
+fn does not have ... argument, and
+rejig ... arguments do not match fn arguments:
 %s
-", names(dots)[is.na(replacements)] |> paste(collapse = ", ")
+",
+      names(dots)[is.na(replacements)] |> paste(collapse = ", ")
     )
     stop(errmsg)
   }
 
-  match.call.defaults <- function(
+  match_call_defaults <- function(
     definition = sys.function(sys.parent()),
     call = sys.call(sys.parent()),
-    expand.dots = TRUE,
+    expand_dots = TRUE,
     envir = parent.frame(2L)
   ) {
     # get the call
-    mc <- match.call(definition, call, expand.dots, envir)
+    mc <- match.call(definition, call, expand_dots, envir)
     # get the formals, tossing any ellipsis
     fs <- formals(definition, envir)
     fs$... <- NULL
 
     # for any arguments set in formals & not in the call
-    for(nm in setdiff(names(fs), names(mc)))
-      mc[nm] <- fs[nm] # add those to the call
+    for (nm in setdiff(names(fs), names(mc))) {
+      mc[nm] <- fs[nm]
+    } # add those to the call
 
-    return(mc)
+    mc
   }
 
   # correct any partially matched defaults
   names(dots)[!is.na(replacements)] <- replacements[!is.na(replacements)]
   # set the new defaults
-  formals(.FUN)[names(dots)] <- dots
-  environment(.FUN) <- .ENV
+  formals(fn_copy)[names(dots)] <- dots
+  environment(fn_copy) <- env
 
   if (hasdots && any(is.na(replacements))) {
-    # the internals of FUN may pass around the ellipsis, which now
+    # the internals of fn may pass around the ellipsis, which now
     # excludes newly set default variables, so need to use it
-    body(.FUN) <- substitute({
-      mc <- match.call.defaults()
-      mc[[1]] <- FUN
+    body(fn_copy) <- substitute({
+      mc <- match_call_defaults()
+      mc[[1]] <- fn
       eval(mc)
     })
   }
 
-  return(.FUN)
-
+  fn_copy
 }
 
 trap <- function(.target) {
-
-  #' consolidate single-scenario files into single object
-  #'
-  #' @param args a `character()`; all the arguments to filter down from for
-  #' reading in files
-  #'
-  #' @param pattern a string; the pattern to match to identify files to keep
-  #'
-  #' @return a `data.table`
-  consolidate <- function(
-    args, pattern
-  ) {
-
-    # extract the relevant args
-    relargs <- grep(pattern, args, value = TRUE)
-
-    # read relevant files and bind them together
-    res_dt <- relargs |> lapply(readRDS) |>
-      rbindlist(idcol = "file_index")
-
-    # scenario output files all have foo_ISO_PATHOGEN.ext pattern
-    pat <- "(.*)_(.*)"
-    fullpat <- paste0("^.*_", pat, "\\..*$")
-    file_info <- relargs |> gsub(fullpat, "\\1_\\2", x = _)
-    res_dt[, place := file_info[file_index] |> gsub(pat, "\\1", x = _)]
-    res_dt[, pathogen := file_info[file_index] |> gsub(pat, "\\2", x = _)]
-    res_dt$file_index <- NULL
-
-    return(res_dt)
-  }
-
   from_labels <- c(
-    "0" = "0-4", "5" = "5-19", "20" = "20-64", "65" = "65+"
+    "0" = "0-4",
+    "5" = "5-19",
+    "20" = "20-64",
+    "65" = "65+"
   )
 
   age_group_labels <- from_labels |> setNames(1:4)
@@ -143,69 +120,109 @@ trap <- function(.target) {
   intervention_labels <- from_labels |>
     setNames(c("none", paste0("vax_", c("young", "working", "older"))))
   intervention_labels[1] <- "Nobody"
-  # selected using colorbrewer2.org: https://colorbrewer2.org/#type=sequential&scheme=GnBu&n=5
+  # selected using colorbrewer2.org:
+  # https://colorbrewer2.org/#type=sequential&scheme=GnBu&n=5
   intervention_cols <- c("black", "#fecc5c", "#fd8d3c", "#d7191c") |>
     setNames(names(intervention_labels))
 
   pathogen_labels <- c(FLU = "Flu-like", SC2 = "COVID-like")
 
   model_assumption_labels <- c(
-    f_mid = "IFR(mid(Age))", f_mean = "IFR(E[Age])", mean_f = 'unused', wm_f = "paramix",
-    f_val = "IFR(age)", full = "High resolution"
+    f_mid = "IFR(mid(Age))",
+    f_mean = "IFR(E[Age])",
+    mean_f = "unused",
+    wm_f = "paramix",
+    f_val = "IFR(age)",
+    full = "High resolution"
   )
-  model_assumption_cols <- c("#d01c8b", "#f1b6da", "#b8e186", "#4dac26", "black", "grey25") |>
+  model_assumption_cols <- c(
+    "#d01c8b",
+    "#f1b6da",
+    "#b8e186",
+    "#4dac26",
+    "black",
+    "grey25"
+  ) |>
     setNames(names(model_assumption_labels))
 
   distill_assumption_labels <- c(
-    "Uniform", "Mean age",
-    "Prop. to\npop. density", "paramix", "unused", "High resolution"
-  ) |> setNames(names(model_assumption_labels))
-
-  model_cols <- c("#fed976", "#feb24c", "black","#f03b20", "#fd8d3c", "#bd0026") |>
+    "Uniform",
+    "Mean age",
+    "Prop. to\npop. density",
+    "paramix",
+    "unused",
+    "High resolution"
+  ) |>
     setNames(names(model_assumption_labels))
 
-  distill_cols <- c("#fed976", "#feb24c", "#fd8d3c", "#f03b20", "black", "#bd0026") |>
+  model_cols <- c(
+    "#fed976",
+    "#feb24c",
+    "black",
+    "#f03b20",
+    "#fd8d3c",
+    "#bd0026"
+  ) |>
+    setNames(names(model_assumption_labels))
+
+  distill_cols <- c(
+    "#fed976",
+    "#feb24c",
+    "#fd8d3c",
+    "#f03b20",
+    "black",
+    "#bd0026"
+  ) |>
     setNames(names(distill_assumption_labels))
 
   scale_color_intervention <- rejig(
-    scale_color_manual, name = "Vaccinate ",
-    breaks = names(intervention_labels), labels = intervention_labels,
+    scale_color_manual,
+    name = "Vaccinate ",
+    breaks = names(intervention_labels),
+    labels = intervention_labels,
     values = intervention_cols,
     aesthetics = c("color", "fill")
   )
 
   scale_color_model <- rejig(
-    scale_color_manual, name = "Approach",
-    breaks = names(model_assumption_labels), labels = model_assumption_labels,
+    scale_color_manual,
+    name = "Approach",
+    breaks = names(model_assumption_labels),
+    labels = model_assumption_labels,
     values = model_cols,
     aesthetics = c("color", "fill")
   )
 
   scale_color_distill <- rejig(
-    scale_color_manual, name = "Approach",
-    breaks = names(distill_assumption_labels), labels = distill_assumption_labels,
+    scale_color_manual,
+    name = "Approach",
+    breaks = names(distill_assumption_labels),
+    labels = distill_assumption_labels,
     values = distill_cols,
     aesthetics = c("color", "fill")
   )
 
   scale_x_simtime <- rejig(
-    scale_x_continuous, name = "Simulation Time (weeks)",
-    breaks = \(lims) seq(0, lims[2], by = 7), labels = \(b) b / 7,
+    scale_x_continuous,
+    name = "Simulation Time (weeks)",
+    breaks = \(lims) seq(0, lims[2], by = 7),
+    labels = \(b) b / 7,
     expand = expansion()
   )
 
   scale_linetype_pathogen <- rejig(
     scale_linetype_discrete,
-    name = "Pathogen", labels = pathogen_labels
+    name = "Pathogen",
+    labels = pathogen_labels
   )
 
   facet_iso <- rejig(
-    facet_grid, cols = vars(iso3),
+    facet_grid,
+    cols = vars(iso3),
     labeller = ggplot2::labeller(iso3 = iso_labels)
   )
 
   save(list = ls(all.names = FALSE), file = .target)
-
 }
 
 trap(.args[1])

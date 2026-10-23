@@ -1,15 +1,18 @@
-
 require(data.table)
 require(paramix)
 require(socialmixr)
 
-.args <- if (interactive()) c(
-  file.path("input", "population.rds"),
-  file.path("input", "disease_pars.rda"),
-  "AFG",
-  "FLU",
-  file.path("input", "param_AFG_FLU.rda")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    file.path("input", "population.rds"),
+    file.path("input", "disease_pars.rda"),
+    "AFG",
+    "FLU",
+    file.path("input", "param_AFG_FLU.rda")
+  )
+} else {
+  commandArgs(trailingOnly = TRUE)
+}
 
 pop_dt <- readRDS(.args[1])
 load(.args[2]) # ifr_opts
@@ -25,9 +28,12 @@ model_agelimits <- c(0, 5, 20, 65, 101)
 
 # assume all age-contact patterns based off POLYMOD results
 cmij <- contact_matrix(
-  polymod, survey.pop = pop_dt[, .(lower.age.limit = from, population = weight*1e3) ],
-  age.limits = model_agelimits, missing.participant.age = "remove",
-  missing.contact.age = "remove", symmetric = TRUE
+  polymod,
+  survey.pop = pop_dt[, .(lower.age.limit = from, population = weight * 1e3)],
+  age.limits = model_agelimits,
+  missing.participant.age = "remove",
+  missing.contact.age = "remove",
+  symmetric = TRUE
 )$matrix
 
 # for checking a high resolution approximation;
@@ -39,16 +45,20 @@ cmij <- contact_matrix(
 widths <- diff(model_agelimits)
 cmijfull <- array(0, dim = c(sum(widths), sum(widths)))
 for (i in seq_along(widths)) {
-  newrow <- rep(cmij[i,], times = widths)
+  newrow <- rep(cmij[i, ], times = widths)
   for (j in model_agelimits[i]:(model_agelimits[i + 1] - 1)) {
-    cmijfull[j,] <- newrow
+    cmijfull[j, ] <- newrow
   }
 }
 
-bound_pop_dt <- pop_dt[, .(from = c(from, max(from) + 1L), weight = c(weight, 0))]
+bound_pop_dt <- pop_dt[, .(
+  from = c(from, max(from) + 1L),
+  weight = c(weight, 0)
+)]
 
 mapping_dt <- alembic(
-  f_param = f_ifr, f_pop = bound_pop_dt,
+  f_param = f_ifr,
+  f_pop = bound_pop_dt,
   model_partition = model_agelimits,
   output_partition = bound_pop_dt[, seq(min(from), max(from))]
 )
@@ -56,14 +66,20 @@ mapping_dt <- alembic(
 # using `parameter_summary` instead of `blend`, because we want to compare to
 # the naive alternatives
 ifr_params <- parameter_summary(
-  f_param = f_ifr, f_pop = bound_pop_dt,
-  model_partition = model_agelimits, resolution = 102L
+  f_param = f_ifr,
+  f_pop = bound_pop_dt,
+  model_partition = model_agelimits,
+  resolution = 102L
 )
 
 ifr_params[, model_partition := model_agelimits[model_category]]
 
 save(
-  model_agelimits, ifr_params, mapping_dt, cmij, sim_pars, cmijfull,
+  model_agelimits,
+  ifr_params,
+  mapping_dt,
+  cmij,
+  sim_pars,
+  cmijfull,
   file = tail(.args, 1)
 )
-

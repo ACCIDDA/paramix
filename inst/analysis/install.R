@@ -1,4 +1,3 @@
-
 stopifnot("Must have `renv` installed." = require(renv))
 
 renv::activate()

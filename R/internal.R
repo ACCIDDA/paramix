@@ -1,52 +1,66 @@
-
-
-check_not_numeric <- function(var) {
-  if (!is.numeric(var)) {
-    stop(sprintf(
-      "`%s` is not numeric", toString(var)
-    ))
-  }
-  if (any(is.na(var))) {
-    stop(sprintf(
-      "`%s` contains NA/NaN values", toString(var)
-    ))
-  }
+check_not_numeric <- function(var, name = deparse(substitute(var)), n = 1L) {
+  stop_fmt_if(
+    !is.numeric(var),
+    ERR_PARTITION_NOT_NUMERIC,
+    name = name,
+    n = n + 1L
+  )
+  stop_fmt_if(
+    any(is.na(var)),
+    ERR_PARTITION_HAS_NA,
+    name = name,
+    n = n + 1L
+  )
 }
 
-check_sorted <- function(var) {
-  if (is.unsorted(var)) {
-    warning(sprintf(
-      "`%s` is not sorted: %s", deparse(substitute(var)), toString(var)
-    ))
-    return(sort(var))
+check_sorted <- function(var, name = deparse(substitute(var)), n = 1L) {
+  if (
+    warn_fmt_if(
+      is.unsorted(var),
+      MSG_PARTITION_NOT_SORTED,
+      name = name,
+      values = toString(var),
+      n = n + 1L
+    )
+  ) {
+    sort(var)
   } else {
-    return(var)
+    var
   }
 }
 
-check_unique <- function(var) {
+check_unique <- function(var, name = deparse(substitute(var)), n = 1L) {
   ret <- unique(var)
-  if (length(ret) != length(var)) {
-    warning(sprintf(
-      "`%s` is not unique: %s", deparse(substitute(var)), toString(var)
-    ))
-  }
-  return(ret)
+  warn_fmt_if(
+    length(ret) != length(var),
+    MSG_PARTITION_NOT_UNIQUE,
+    name = name,
+    values = toString(var),
+    n = n + 1L
+  )
+  ret
 }
 
-check_bound <- function(vlen, var, res, what) {
+check_bound <- function(vlen, var, res, what, name = deparse(substitute(var))) {
   wtf <- switch(
-    what, lower = utils::head, upper = utils::tail
+    what,
+    lower = utils::head,
+    upper = utils::tail
   )
 
-  if (vlen) {
-    if (wtf(var, 1) != wtf(res, 1)) {
-      return(sprintf(
+  if (vlen > 0L) {
+    var_bound <- wtf(var, 1L)
+    res_bound <- wtf(res, 1L)
+    if (var_bound != res_bound) {
+      sprintf(
         "`%s` %s bound does not match mixture: %s vs %s",
-        deparse(substitute(var)), what, toString(var[1]), toString(res[1])
-      ))
+        name,
+        what,
+        toString(var_bound),
+        toString(res_bound)
+      )
     }
-  } else invisible()
+  }
 }
 
 #' @title Create a Least-Common-Interval Partition
@@ -61,19 +75,21 @@ check_bound <- function(vlen, var, res, what) {
 #'
 #' @return a sorted numeric vector with unique values
 #' @keywords internal
+#' @noRd
 make_partition <- function(
-  model_partition = numeric(0), output_partition = numeric(0)
+  model_partition = numeric(0),
+  output_partition = numeric(0)
 ) {
-
   check_not_numeric(model_partition)
   check_not_numeric(output_partition)
 
   mlen <- length(model_partition)
   olen <- length(output_partition)
 
-  if (mlen + olen == 0L) {
-    stop("`model_partition` and `output_partition` cannot both be empty.")
-  }
+  stop_fmt_if(
+    mlen + olen == 0L,
+    ERR_PARTITION_BOTH_EMPTY
+  )
 
   model_partition <- check_sorted(model_partition)
   model_partition <- check_unique(model_partition)
@@ -89,61 +105,63 @@ make_partition <- function(
     check_bound(olen, output_partition, res, "upper")
   )
 
-  if (!is.null(checked_bounds)) {
-    checked_bounds <- c(
-      "Partition boundaries must match. If these partitions are correct, for example if the output partitions drop results from the total simulated population, consider supplying a dummy partition and then discarding it.",
-      checked_bounds
-    )
-    stop(paste(checked_bounds, collapse = "\n\t"))
-  }
+  stop_fmt_if(
+    !is.null(checked_bounds),
+    ERR_PARTITION_BOUNDS_MISMATCH,
+    details = paste(checked_bounds, collapse = "\n\t")
+  )
 
-
-  return(res)
+  res
 }
 
 sanitize_data <- function(x, bounds) {
-  if (dim(x)[2] < 2) {
-    stop(sprintf("data must have at least two columns."))
-  } else if (dim(x)[2] != 2) {
-    warning(sprintf(
-      "data has more than two columns; only using %s",
-      toString(names(x)[1:2])
-    ))
-  }
+  stop_fmt_if(
+    ncol(x) < 2L,
+    ERR_DATA_MIN_COLS
+  )
+  warn_fmt_if(
+    ncol(x) > 2L,
+    MSG_DATA_EXTRA_COLS,
+    cols = toString(names(x)[1:2])
+  )
   x <- x[, c(1, 2)]
-  if (!is.numeric(x[[1]]) || !is.numeric(x[[2]])) {
-    stop(sprintf(
-      "first two data columns must satisfy is.numeric; got classes %s, %s",
-      toString(class(x[[1]])),
-      toString(class(x[[2]]))
-    ))
-  }
-  if (is.unsorted(x[[1]])) {
-    warning(sprintf(
-      "data column 1 is unsorted: %s; will be sorted before interpolation",
-      toString(x[[1]])
-    ))
+  classes_str <- paste(
+    toString(class(x[[1]])),
+    toString(class(x[[2]])),
+    sep = ", "
+  )
+  stop_fmt_if(
+    !is.numeric(x[[1]]) || !is.numeric(x[[2]]),
+    ERR_DATA_COLS_NOT_NUMERIC,
+    classes = classes_str
+  )
+  if (
+    warn_fmt_if(
+      is.unsorted(x[[1]]),
+      MSG_DATA_COL1_UNSORTED,
+      values = toString(x[[1]])
+    )
+  ) {
     x <- x[order(x[[1]]), ]
   }
-  if (bounds[1] < x[[1]][1]) {
-    warning(sprintf(
-      "data may not support bounds: lower bound %s < first column 1 entry %s",
-      bounds[1], x[[1]][1]
-    ))
-  }
-  if (bounds[2] > tail(x[[1]], 1)) {
-    warning(sprintf(
-      "data may not support bounds: upper bound %s > last column 1 entry %s",
-      bounds[1], x[[1]][1]
-    ))
-  }
-  if (length(unique(x[[1]])) != dim(x)[1]) {
-    warning(sprintf(
-      "data column 1 is not unique: %s; ensure interpolation function can handle this.",
-      toString(x[[1]])
-    ))
-  }
-  return(x)
+  warn_fmt_if(
+    bounds[1] < x[[1]][1],
+    MSG_DATA_LOWER_BOUND_OOB,
+    bound = bounds[1],
+    entry = x[[1]][1]
+  )
+  warn_fmt_if(
+    bounds[2] > utils::tail(x[[1]], 1L),
+    MSG_DATA_UPPER_BOUND_OOB,
+    bound = bounds[2],
+    entry = utils::tail(x[[1]], 1L)
+  )
+  warn_fmt_if(
+    length(unique(x[[1]])) != nrow(x),
+    MSG_DATA_COL1_NOT_UNIQUE,
+    values = toString(x[[1]])
+  )
+  x
 }
 
 #' @title Internal Conversion of Data to Function
@@ -160,15 +178,18 @@ sanitize_data <- function(x, bounds) {
 #'
 #' @return a function
 #' @keywords internal
+#' @noRd
 to_function <- function(x, bounds, interp_opts) {
   if (is.function(x)) {
     bcheck <- c(x(bounds[1]), x(bounds[2]))
-    if (any(is.na(bcheck))) {
-      stop(c(sprintf(
-        "The (lower, upper) bounds of the mixing partition evaluate to (%s, %s); the function %s must be defined on the whole partition.", deparse(substitute(x)), toString(bcheck[1]), toString(bcheck[2])
-      )))
-    }
-    return(x)
+    stop_fmt_if(
+      any(is.na(bcheck)),
+      ERR_TO_FUNCTION_BOUNDS_NA,
+      lb = toString(bcheck[1]),
+      ub = toString(bcheck[2]),
+      fn = deparse(substitute(x))
+    )
+    x
   } else if (is.data.frame(x)) {
     x <- sanitize_data(x, bounds)
 
@@ -180,21 +201,25 @@ to_function <- function(x, bounds, interp_opts) {
       callargs$kind <- NULL
       if (kind == "integral") {
         len <- length(x[[2]])
-        if (x[[2]][len] != 0) {
-          stop(sprintf(
-            "for integral data, the final entry should be 0; got instead: %s",
-            toString(x[[2]][len])
-          ))
-        }
+        stop_fmt_if(
+          x[[2]][len] != 0,
+          ERR_INTEGRAL_FINAL_NOT_ZERO,
+          val = toString(x[[2]][len])
+        )
         ws <- diff(x[[1]])
-        x[[2]] <- c(x[[2]][-len]/ws, 0)
+        x[[2]] <- c(x[[2]][-len] / ws, 0)
       }
     }
     callargs$.usekind <- NULL
     callargs$x <- x
-    return(do.call(callfun, args = callargs))
+    do.call(callfun, args = callargs)
   } else {
-    stop(sprintf("%s must be a function or data.frame; received %s.", deparse(substitute(x)), class(x)))
+    stop_fmt_if(
+      TRUE,
+      ERR_TO_FUNCTION_TYPE,
+      name = deparse(substitute(x)),
+      type = toString(class(x))
+    )
   }
 }
 
@@ -210,6 +235,7 @@ to_function <- function(x, bounds, interp_opts) {
 #' @return a new function, f(x) = f_param(x)*f_pop(x)
 #'
 #' @keywords internal
+#' @noRd
 make_weight <- function(f_param, f_pop) {
-  return(function(x) f_param(x) * f_pop(x))
+  function(x) f_param(x) * f_pop(x)
 }

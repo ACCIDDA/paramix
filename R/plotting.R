@@ -1,4 +1,3 @@
-
 #' @title Parameter Calculation Comparison Summary
 #'
 #' @description
@@ -60,15 +59,24 @@
 #'
 #' @importFrom data.table melt.data.table
 #' @export
+#' @autoglobal
 parameter_summary <- function(
-  f_param, f_pop, model_partition,
+  f_param,
+  f_pop,
+  model_partition,
   resolution = 101L
 ) {
-
-  output_partition <- seq(model_partition[1], tail(model_partition, 1), length.out = resolution)
+  output_partition <- seq(
+    model_partition[1],
+    tail(model_partition, 1),
+    length.out = resolution
+  )
 
   alembic_dt <- alembic(
-    f_param, f_pop, model_partition, output_partition
+    f_param,
+    f_pop,
+    model_partition,
+    output_partition
   )
 
   plot_dt <- data.table::data.table(
@@ -82,25 +90,24 @@ parameter_summary <- function(
 
   blended <- blend(alembic_dt)
 
-  plot_dt[, c("f_mid", "f_mean", "mean_f", "wm_f") := .(
-    f_param(mean(x)),
-    f_param(weighted.mean(x, relpop)),
-    weighted.mean(f_param(x), relpop),
-    blended[.GRP, value]
-  ), by = model_category]
+  plot_dt[,
+    c("f_mid", "f_mean", "mean_f", "wm_f") := .(
+      f_param(mean(x)),
+      f_param(weighted.mean(x, relpop)),
+      weighted.mean(f_param(x), relpop),
+      blended[.GRP, value]
+    ),
+    by = model_category
+  ]
 
   plot_dt$relpop <- NULL
 
-  return(melt.data.table(
+  melt.data.table(
     plot_dt,
-    id.vars = c("model_category", "x"), variable.name = "method"
-  ))
-
+    id.vars = c("model_category", "x"),
+    variable.name = "method"
+  )
 }
-
-utils::globalVariables(c(
-  "f_val", "x", "model_category", "new_from", "density", "value"
-))
 
 #' @title Distillation Calculation Comparison Summary
 #'
@@ -150,41 +157,57 @@ utils::globalVariables(c(
 #' @import data.table
 #' @importFrom stats weighted.mean
 #' @export
+#' @autoglobal
 distill_summary <- function(
-  alembic_dt, outcomes_dt, groupcol = names(outcomes_dt)[1]
+  alembic_dt,
+  outcomes_dt,
+  groupcol = names(outcomes_dt)[1]
 ) {
   setnames(setDT(outcomes_dt), groupcol, "model_partition")
 
   distilled_dt <- alembic_dt[outcomes_dt, on = .(model_partition)]
-  distilled_dt[, weigh_at := output_partition + c(diff(output_partition) / 2, 0)]
+  distilled_dt[,
+    weigh_at := output_partition + c(diff(output_partition) / 2, 0)
+  ]
 
-  return(rbind(
+  rbind(
     # approach 1: all outcomes at mean value
-    distilled_dt[, .(
+    distilled_dt[,
+      .(
         partition = weighted.mean(weigh_at, relpop),
-        value = value[1], method = "f_mean"
-      ), by = model_partition
+        value = value[1],
+        method = "f_mean"
+      ),
+      by = model_partition
     ][, .SD, .SDcols = -c("model_partition")],
 
     # approach 2: outcomes spread uniformly within group
-    distilled_dt[, .(
-      partition = output_partition, value = value / .N, method = "f_mid"
-    ), by = model_partition][, .SD, .SDcols = -c("model_partition")],
+    distilled_dt[,
+      .(
+        partition = output_partition,
+        value = value / .N,
+        method = "f_mid"
+      ),
+      by = model_partition
+    ][, .SD, .SDcols = -c("model_partition")],
 
     # approach 3: proportionally to age distribution within the group
-    distilled_dt[, .(
-      partition = output_partition, value = value * relpop / sum(relpop)
-    ), by = model_partition][,
-      .(value = sum(value), method = "mean_f"), by = partition
+    distilled_dt[,
+      .(
+        partition = output_partition,
+        value = value * relpop / sum(relpop)
+      ),
+      by = model_partition
+    ][,
+      .(value = sum(value), method = "mean_f"),
+      by = partition
     ],
 
     # approach 4: proportionally to age *and* relative mortality rates
     setnames(
       distill(alembic_dt, outcomes_dt)[, method := "wm_f"],
-      "output_partition", "partition"
+      "output_partition",
+      "partition"
     )
-  )[, method := factor(method)])
-
+  )[, method := factor(method)]
 }
-
-utils::globalVariables(c("model_from", "weigh_at", "method", "partition"))

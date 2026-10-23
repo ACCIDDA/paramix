@@ -1,8 +1,13 @@
 linters: linters_with_defaults(
+    line_length_linter = line_length_linter(100L),
     object_usage_linter = NULL,
-    indentation_linter = NULL
+    object_name_linter = object_name_linter(
+      styles = c("snake_case", "symbols"),
+      regexes = c("^paramix$", "^ERR_", "^MSG_")
+    ),
+    return_linter = return_linter(
+      return_style = "implicit"
+    )
   )
 encoding: "UTF-8"
-exclusions: list(
-    "inst"
-  )
+exclusions: list("inst/scripts", "inst/analysis/renv", "data-raw")

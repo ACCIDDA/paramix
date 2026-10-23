@@ -1,4 +1,3 @@
-
 #' @title Interpolation Options
 #'
 #' @description
@@ -38,15 +37,15 @@
 #' )
 #' @export
 interpolate_opts <- function(fun, kind = c("point", "integral"), ...) {
-  if (!is.function(fun)) {
-    stop(sprintf("%s is not a function.", deparse(substitute(fun))))
-  }
+  stop_fmt_if(
+    !is.function(fun),
+    ERR_INTERP_NOT_FUNCTION,
+    name = deparse(substitute(fun))
+  )
 
   kind <- match.arg(kind, c("point", "integral"))
   funargs <- formals(fun)
-  if (is.null(funargs)) {
-    stop("`fun` must have at least one argument.")
-  }
+  stop_fmt_if(is.null(funargs), ERR_INTERP_FUN_NO_ARGS)
   newargs <- list(...)
   # for when interpolate_opts is do.call'd on interpolate_opts output
   newargs$.usekind <- NULL
@@ -54,28 +53,26 @@ interpolate_opts <- function(fun, kind = c("point", "integral"), ...) {
   baseret <- list(fun = fun, kind = kind, .usekind = "kind" %in% names(funargs))
 
   if (length(newargs)) {
-    if (is.null(names(newargs)) || ("" %in% names(newargs))) {
-      stop("If provided via `...` additional new args must be named.")
-    }
+    stop_fmt_if(
+      is.null(names(newargs)) || ("" %in% names(newargs)),
+      ERR_INTERP_NEWARGS_UNNAMED
+    )
     if (!("..." %in% names(funargs))) {
-      if (length(setdiff(names(newargs), names(funargs))) != 0) {
-        stop(sprintf(
-          "Provided arguments not present in %s signature: %s (signature arguments are %s)",
-          deparse(substitute(fun)),
-          toString(setdiff(names(newargs), names(funargs))),
-          toString(funargs)
-        ))
-      }
+      stop_fmt_if(
+        length(setdiff(names(newargs), names(funargs))) != 0L,
+        ERR_INTERP_INVALID_ARGS,
+        name = deparse(substitute(fun)),
+        extra = toString(setdiff(names(newargs), names(funargs))),
+        sig = toString(funargs)
+      )
     }
-    if (names(funargs)[1] %in% names(newargs)) {
-      stop(sprintf(
-        "The first argument to `fun` is where the data will be sent; cannot provide %s via `...`",
-        names(funargs)[1]
-      ))
-    }
-    return(c(baseret, newargs))
+    stop_fmt_if(
+      names(funargs)[1] %in% names(newargs),
+      ERR_INTERP_FIRST_ARG_RESERVED,
+      first_arg = names(funargs)[1]
+    )
+    c(baseret, newargs)
   } else {
-    return(baseret)
+    baseret
   }
-
 }

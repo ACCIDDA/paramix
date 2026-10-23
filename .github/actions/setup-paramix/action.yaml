@@ -1,0 +1,57 @@
+name: 'Setup paramix CI environment'
+description: >
+  Shared setup for paramix's CI jobs. Installs R and the package's dependencies
+  and, optionally, performs the NAMESPACE bootstrap, roxygen documentation,
+  and diagram generation that the build / check / site / coverage / submission
+  jobs all need.
+
+inputs:
+  r-version:
+    description: 'R version to install (passed to setup-r).'
+    required: false
+    default: 'release'
+  extra-packages:
+    description: 'Extra packages for r-lib/actions/setup-r-dependencies.'
+    required: true
+  needs:
+    description: 'Config/Needs profile(s) for r-lib/actions/setup-r-dependencies.'
+    required: true
+  bootstrap-namespace:
+    description: 'Regenerate NAMESPACE from source before building.'
+    required: false
+    default: 'true'
+  generate-docs:
+    description: 'Regenerate man/*.Rd via roxygen2::roxygenise().'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: ${{ inputs.r-version }}
+        use-public-rspm: true
+
+    - name: Setup just
+      uses: extractions/setup-just@v2
+
+    - name: Setup air
+      uses: posit-dev/setup-air@v1
+
+    - name: Install dependencies
+      uses: r-lib/actions/setup-r-dependencies@v2
+      with:
+        extra-packages: ${{ inputs.extra-packages }}
+        needs: ${{ inputs.needs }}
+
+    - name: Bootstrap NAMESPACE
+      if: inputs.bootstrap-namespace == 'true'
+      shell: bash
+      run: just bootstrap-namespace
+
+    - name: Generate documentation
+      if: inputs.generate-docs == 'true'
+      shell: bash
+      run: just docs

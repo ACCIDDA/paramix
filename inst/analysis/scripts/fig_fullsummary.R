@@ -1,23 +1,28 @@
-
 require(data.table)
 require(paramix)
 require(ggplot2)
 require(patchwork)
 
-.args <- if (interactive()) c(
-  file.path("figure", "fig_utilities.rda"),
-  file.path("input", "population.rds"),
-  file.path("input", "lex.rds"),
-  file.path("input", "disease_pars.rda"),
-  file.path("output", "incidence.rds"),
-  file.path("figure", "summary.png")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    file.path("figure", "fig_utilities.rda"),
+    file.path("input", "population.rds"),
+    file.path("input", "disease_pars.rda"),
+    file.path("output", "incidence.rds"),
+    file.path("figure", "summary.tiff")
+  )
+} else {
+  commandArgs(trailingOnly = TRUE)
+}
 
 load(.args[1])
-load(.args[4])
-inc_dt <- readRDS(.args[5])
+load(.args[3])
+inc_dt <- readRDS(.args[4])
 
-model_partition <- unique(sort(c(inc_dt[method == "f_mid", c(model_partition)], 101)))
+model_partition <- unique(sort(c(
+  inc_dt[method == "f_mid", c(model_partition)],
+  101
+)))
 
 inc_dt <- inc_dt[method == "f_mean"][,
   .(value = sum(value), capita = sum(unique(capita))),
@@ -27,95 +32,131 @@ inc_dt <- inc_dt[method == "f_mean"][,
 isoset <- inc_dt[, unique(iso3)]
 
 pop_dt <- readRDS(.args[2])[iso3 %in% isoset]
-lex_dt <- readRDS(.args[3])[iso3 %in% isoset]
 
-pop_p <- ggplot(pop_dt) + aes(x = from, y = weight) +
+pop_p <- ggplot(pop_dt) +
+  aes(x = from, y = weight) +
   facet_iso() +
   geom_bar(stat = "identity", fill = "#b2abd2", width = 1) +
-  theme_minimal() + theme(
+  theme_minimal() +
+  theme(
     # axis.title.x = element_blank(), axis.text.x = element_blank(),
     panel.spacing.x = unit(1.5, "line")
-  ) + scale_x_continuous("Age (years)", breaks = seq(0, 100, by = 10)) +
+  ) +
+  scale_x_continuous("Age (years)", breaks = seq(0, 100, by = 10)) +
   labs(y = "Population\n(thousands)")
 
-lex_p <- ggplot(lex_dt) + aes(x = age, y = ex) +
-  facet_iso() +
-  geom_line(color = "#5e3c99", lwd=0.8) +
-  theme_minimal() + theme(
-    strip.background = element_blank(), strip.text = element_blank(),
-    axis.title.x = element_blank(), axis.text.x = element_blank(),
-    panel.spacing.x = unit(1.5, "line")
-  ) +
-  labs(y = "Remaining life expectancy\n(years)")
-
-bound_pop_dt <- pop_dt[, .(
-  from = c(from, max(from) + 1L), weight = c(weight, 0)
-), by = iso3]
+bound_pop_dt <- pop_dt[,
+  .(
+    from = c(from, max(from) + 1L),
+    weight = c(weight, 0)
+  ),
+  by = iso3
+]
 
 ifr_dt <- bound_pop_dt[,
-  ifr_opts |> lapply(\(fp) parameter_summary(fp, .SD, model_partition, resolution = 102L)) |>
+  ifr_opts |>
+    lapply(\(fp) {
+      parameter_summary(fp, .SD, model_partition, resolution = 102L)
+    }) |>
     rbindlist(idcol = "pathogen"),
   by = iso3
 ]
 
-ifr_p <- ggplot(ifr_dt[x <= 100 & !method=='mean_f']) + aes(x, y = value, color = method) +
-  facet_iso(rows = vars(pathogen), labeller = labeller(
-    iso3 = iso_labels, pathogen = pathogen_labels
-  )) +
-  geom_line(data = \(dt) subset(dt, method == "f_val"), linetype = "dotted", lwd=0.8) +
-  geom_step(data = \(dt) subset(dt, method != "f_val"), lwd=0.7) +
-  theme_minimal() + theme(
-    strip.background.x = element_blank(), strip.text.x = element_blank(),
-    legend.position = "inside", legend.position.inside = c(0.5, 0.5),
-    legend.justification = c(0.5, 0.5), legend.direction = "horizontal",
+ifr_p <- ggplot(ifr_dt[x <= 100 & !method == "mean_f"]) +
+  aes(x, y = value, color = method) +
+  facet_iso(
+    rows = vars(pathogen),
+    labeller = labeller(
+      iso3 = iso_labels,
+      pathogen = pathogen_labels
+    )
+  ) +
+  geom_line(
+    data = \(dt) subset(dt, method == "f_val"),
+    linetype = "dotted",
+    lwd = 0.8
+  ) +
+  geom_step(data = \(dt) subset(dt, method != "f_val"), lwd = 0.7) +
+  theme_minimal() +
+  theme(
+    strip.background.x = element_blank(),
+    strip.text.x = element_blank(),
+    legend.position = "inside",
+    legend.position.inside = c(0.5, 0.5),
+    legend.justification = c(0.5, 0.5),
+    legend.direction = "horizontal",
     legend.spacing = unit(0.5, "line"),
     panel.spacing.x = unit(1.5, "line")
-  ) + scale_color_manual(
-    values=model_assumption_cols, "Approach", labels=model_assumption_labels
+  ) +
+  scale_color_manual(
+    values = model_assumption_cols,
+    "Approach",
+    labels = model_assumption_labels
   ) +
   scale_x_continuous("Age (years)", breaks = seq(0, 100, by = 10)) +
   scale_y_log10(
-    "Infection Fatality Ratio", breaks = 10^c(-6, -4, -2, 0), limits = 10^c(-6, 0)
+    "Infection Fatality Ratio",
+    breaks = 10^c(-6, -4, -2, 0),
+    limits = 10^c(-6, 0)
   )
 
-inc_p <- ggplot(inc_dt[between(time, 0, 7*15)]) + aes(
-  x = time, y = value/capita, color = intervention, linetype = pathogen
-) + facet_iso() +
-  geom_line(lwd=0.7) +
+inc_p <- ggplot(inc_dt[between(time, 0, 7 * 15)]) +
+  aes(
+    x = time,
+    y = value / capita,
+    color = intervention,
+    linetype = pathogen
+  ) +
+  facet_iso() +
+  geom_line(lwd = 0.7) +
   scale_y_continuous(
-    "Infections\n(incidence per capita)", limits = c(0, 0.06)
+    "Infections\n(incidence per capita)",
+    limits = c(0, 0.06)
   ) +
   scale_color_intervention() +
   scale_linetype_pathogen() +
-  scale_x_simtime('Simulation time (weeks)') +
-  theme_minimal() + theme(
-    strip.background = element_blank(), strip.text = element_blank(),
+  scale_x_simtime("Simulation time (weeks)") +
+  theme_minimal() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_blank(),
     panel.spacing.x = unit(1.5, "line"),
-    legend.position = "inside", legend.position.inside = c(0.4, 1.05),
+    legend.position = "inside",
+    legend.position.inside = c(0.5, 1),
     legend.justification.inside = c(0.5, 1),
     legend.direction = "horizontal",
-    legend.margin = margin(), legend.spacing = unit(0, "line"),
-    legend.box.margin = margin()
+    legend.margin = margin(),
+    legend.spacing = unit(0, "line"),
+    legend.box.margin = margin(),
+    legend.box.just = "center"
   )
 
 
-summary_p <- pop_p + ifr_p + inc_p + plot_layout(
-  ncol = 1, heights = c(1, 2, 1)
-) +  plot_annotation(tag_levels = 'a', tag_prefix = '(',
-                     tag_suffix = ')  ')
+summary_p <- pop_p +
+  ifr_p +
+  inc_p +
+  plot_layout(
+    ncol = 1,
+    heights = c(1, 2, 1)
+  ) +
+  plot_annotation(tag_levels = "a", tag_prefix = "(", tag_suffix = ")  ")
 
 tarfile <- tail(.args, 1)
 
 ggsave_opts <- list(
-  filename = tarfile, plot = summary_p,
-  height = 11, width = 8, units = "in", bg = "white"
+  filename = tarfile,
+  plot = summary_p,
+  height = 11,
+  width = 8,
+  units = "in",
+  bg = "white",
+  dpi = 600
 )
 
 if (tarfile %like% "tiff$") {
   ggsave_opts$compression <- "lzw+p"
-  ggsave_opts$dpi <- 600
-  hwratio <- ggsave_opts$height / ggsave_opts$width
-  ggsave_opts$width <- 19
+  hwratio <- (ggsave_opts$height / ggsave_opts$width)
+  ggsave_opts$width <- 8
   ggsave_opts$height <- ggsave_opts$width * hwratio
 }
 

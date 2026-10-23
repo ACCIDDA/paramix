@@ -1,0 +1,121 @@
+name: R-CMD-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup paramix CI environment
+        uses: ./.github/actions/setup-paramix
+        with:
+          extra-packages: any::roxygen2, any::roxyglobals, any::pkgload
+          needs: check
+
+      - name: Guard source tarball size
+        shell: bash
+        run: |
+          R CMD build .
+          TARBALL=$(ls -1 paramix_*.tar.gz 2>/dev/null || ls -1 *.tar.gz 2>/dev/null | head -n 1)
+          SIZE=$(wc -c < "${TARBALL}")
+          echo "Built ${TARBALL} (${SIZE} bytes)"
+          if [ "${SIZE}" -gt 10485760 ]; then
+            echo "::error::Source tarball exceeds 10MB (${SIZE} bytes)"
+            exit 1
+          elif [ "${SIZE}" -gt 5242880 ]; then
+            echo "::warning::Source tarball exceeds 5MB (${SIZE} bytes), CRAN requires < 5MB"
+          fi
+          rm -f "${TARBALL}"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prep-build-artifacts
+          if-no-files-found: ignore
+          retention-days: 1
+          path: |
+            data/*.rda
+            man
+            NAMESPACE
+            R/globals.R
+            vignettes/figures/*.svg
+
+  R-CMD-check:
+    needs: prep
+    runs-on: ${{ matrix.config.os }}
+
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel'}
+          - {os: ubuntu-latest,  r: 'devel'}
+          - {os: macos-latest,   r: 'release'}
+          - {os: macos-latest,   r: 'oldrel'}
+          - {os: macos-latest,   r: 'devel'}
+          - {os: windows-latest, r: 'release'}
+          - {os: windows-latest, r: 'oldrel'}
+          - {os: windows-latest, r: 'devel'}
+
+    continue-on-error: ${{ matrix.config.r == 'devel' }}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Restore the man/ + NAMESPACE + R/globals.R produced by the prep job
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: prep-build-artifacts
+          path: .
+
+      - name: Setup paramix CI environment
+        uses: ./.github/actions/setup-paramix
+        with:
+          r-version: ${{ matrix.config.r }}
+          extra-packages: any::rcmdcheck, any::roxygen2, any::roxyglobals, any::pkgload
+          needs: check
+          bootstrap-namespace: 'false'
+          generate-docs: 'false'
+
+      - name: Check package
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"error"'
+
+  check-result:
+    if: always()
+    needs: [prep, R-CMD-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify prep and all required checks passed
+        run: |
+          if [ "${{ needs.prep.result }}" != "success" ]; then
+            echo "prep job did not succeed (result: ${{ needs.prep.result }})"
+            exit 1
+          fi
+          if [ "${{ needs.R-CMD-check.result }}" != "success" ]; then
+            echo "R-CMD-check did not succeed (result: ${{ needs.R-CMD-check.result }})"
+            exit 1
+          fi
+          echo "prep and R-CMD-check both succeeded."

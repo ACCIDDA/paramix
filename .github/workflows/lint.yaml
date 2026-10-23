@@ -1,0 +1,32 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup paramix CI environment
+        uses: ./.github/actions/setup-paramix
+        with:
+          extra-packages: any::lintr
+          needs: lint
+          bootstrap-namespace: 'false'
+          generate-docs: 'false'
+
+      - name: Lint
+        shell: bash
+        run: just lint
+        env:
+          LINTR_ERROR_ON_LINT: true

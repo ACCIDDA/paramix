@@ -1,8 +1,7 @@
-
 require(odin)
 
+# nolint start: object_name_linter, commas_linter
 sir_odin <- odin::odin({
-
   # Number of groups
   no_groups <- user()
 
@@ -18,8 +17,8 @@ sir_odin <- odin::odin({
   gamma2 <- user() # Infectious period
   cij[,] <- user() # Contact matrix
 
-  sij[,] <- cij[i,j] * I[j] / sum(pop[]) # Transmission matrix
-  lambda[] <- trans * sum(sij[i,]) # Force of infection
+  sij[,] <- cij[i, j] * I[j] / sum(pop[]) # Transmission matrix
+  lambda[] <- trans * sum(sij[i, ]) # Force of infection
   newInf[] <- lambda[i] * S[i] # Newly infected
   onsets[] <- gamma1 * E[i]
   removal[] <- gamma2 * I[i]
@@ -34,10 +33,10 @@ sir_odin <- odin::odin({
   deriv(cumI[]) <- newInf[i]
 
   # Initial values
-  initial(S[]) <- pop[i] - VE[i]*V0[i] - I0[i]
+  initial(S[]) <- pop[i] - VE[i] * V0[i] - I0[i]
   initial(E[]) <- 0
   initial(I[]) <- I0[i]
-  initial(R[]) <- VE[i]*V0[i]
+  initial(R[]) <- VE[i] * V0[i]
   initial(cumI[]) <- 0
 
   # Dimensions
@@ -57,8 +56,8 @@ sir_odin <- odin::odin({
   dim(I) <- no_groups
   dim(R) <- no_groups
   dim(cumI) <- no_groups
-
 })
+# nolint end: object_name_linter, commas_linter
 
 epidemic_run <- function(
   init_infected,
@@ -66,10 +65,12 @@ epidemic_run <- function(
   demography_input,
   contacts,
   init_vaccinated,
-  efficacy, infection_delays,
-  duration, t0 = 0, interval = 1
-){
-
+  efficacy,
+  infection_delays,
+  duration,
+  t0 = 0,
+  interval = 1
+) {
   # define model timings
   t <- as.numeric(seq(t0, duration, interval))
 
@@ -82,21 +83,21 @@ epidemic_run <- function(
     I0 = init_infected,
     V0 = init_vaccinated,
     VE = efficacy,
-    gamma1 = 1/infection_delays[1],
-    gamma2 = 1/infection_delays[2]
+    gamma1 = 1 / infection_delays[1],
+    gamma2 = 1 / infection_delays[2]
   )
 
   # run the model
   y_run <- mod$run(t) |> as.data.table() |> melt.data.table(id.vars = "t")
 
-  return(
-    y_run[
-      variable %like% "cumI"
-    ][
-      order(t), .(time = t, value = c(value[1], diff(value))), by = variable
-    ][,
-      age_group := gsub(".*\\[(\\d+)\\]", "\\1", variable) |> as.integer()
-    ][, .(age_group, time, value)] |> setkey(age_group, time)
-  )
-
+  y_run[
+    variable %like% "cumI"
+  ][
+    order(t),
+    .(time = t, value = c(value[1], diff(value))),
+    by = variable
+  ][,
+    age_group := gsub(".*\\[(\\d+)\\]", "\\1", variable) |> as.integer()
+  ][, .(age_group, time, value)] |>
+    setkey(age_group, time)
 }
