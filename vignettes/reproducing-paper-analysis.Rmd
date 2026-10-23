@@ -12,8 +12,14 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  dev.args = list(bg = "white")
 )
+if (requireNamespace("thematic", quietly = TRUE)) {
+  thematic::thematic_off()
+}
 ```
 
 ## Overview
