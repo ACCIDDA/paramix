@@ -13,6 +13,8 @@ Description: A convenient framework for aggregating and disaggregating continuou
     parametrization of lower-resolution compartmental models (for example, with
     broad age categories) and subsequent upscaling of model outputs to high resolution
     (for example, as needed when calculating age-sensitive measures like years-life-lost).
+    Methods and application to calculating years of life lost are described in
+    Goodfellow et al. (2025) <doi:10.1371/journal.pcbi.1013420>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
@@ -40,7 +42,14 @@ VignetteBuilder: knitr
 Imports: 
     data.table
 Config/testthat/edition: 3
-URL: https://cmmid.github.io/paramix/
-BugReports: https://github.com/cmmid/paramix/issues
+URL: https://accidda.github.io/paramix/, https://doi.org/10.1371/journal.pcbi.1013420
+BugReports: https://github.com/accidda/paramix/issues
 Config/roxyglobals/filename: globals.R
 Config/roxyglobals/unique: FALSE
+Config/Needs/analysis: 
+    countrycode,
+    ggh4x,
+    odin,
+    renv,
+    socialmixr,
+    wpp2022

@@ -19,3 +19,7 @@ This release provides documentation enhancements, build infrastructure improveme
 * Modernized build infrastructure using `justfile`, automated formatting with `air`, and comprehensive `lintr` rules.
 * Updated CI pipelines to multi-platform checks (Linux, macOS, Windows) and automated documentation deployment.
 * Removed generated documentation (`man/*.Rd`) and intermediate vignette render files from version control, managing them dynamically through `roxygen2` and `roxyglobals`.
+* Added dedicated vignette `reproducing-paper-analysis` and citation metadata (`inst/CITATION` and `DESCRIPTION`) for Goodfellow et al. (2025) <doi:10.1371/journal.pcbi.1013420>.
+* Added verification workflow and CI action (`just test-analysis`) for the bundled demonstration analysis.
+
+

@@ -1,0 +1,31 @@
+name: analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-analysis:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup paramix CI environment
+        uses: ./.github/actions/setup-paramix
+        with:
+          extra-packages: any::countrycode, any::ggh4x, any::odin, any::socialmixr, any::renv, any::PPgp/wpp2022
+          needs: analysis
+          bootstrap-namespace: 'true'
+          generate-docs: 'true'
+
+      - name: Verify bundled analysis pipeline
+        shell: bash
+        run: just test-analysis

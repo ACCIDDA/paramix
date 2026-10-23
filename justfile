@@ -69,6 +69,38 @@ spell: bootstrap-namespace
 install: bootstrap-namespace docs
 	R CMD INSTALL .
 
+[group('analysis')]
+[doc('Verify that the bundled demonstration analysis runs and produces all outputs from the installed package')]
+test-analysis jobs="4": install
+	#!/usr/bin/env bash
+	set -euo pipefail
+	TMP_DIR=$(mktemp -d)
+	trap 'rm -rf "${TMP_DIR}"' EXIT
+
+	echo "==> Extracting bundled analysis pipeline from installed paramix..."
+	Rscript -e '
+	  src <- system.file("analysis", package = "paramix")
+	  if (!nzchar(src) || !dir.exists(src)) {
+	    stop("Analysis directory not found in installed paramix package.")
+	  }
+	  dest <- commandArgs(trailingOnly = TRUE)[1]
+	  files <- list.files(src, full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
+	  file.copy(from = files, to = dest, recursive = TRUE)
+	' "${TMP_DIR}"
+
+	echo "==> Running reproduction pipeline in ${TMP_DIR} with make -j{{ jobs }}..."
+	make -C "${TMP_DIR}" -j{{ jobs }}
+
+	echo "==> Verifying expected output products..."
+	test -f "${TMP_DIR}/figure/summary.png" || { echo "Missing figure/summary.png"; exit 1; }
+	test -f "${TMP_DIR}/figure/incidence.png" || { echo "Missing figure/incidence.png"; exit 1; }
+	test -f "${TMP_DIR}/figure/averted.png" || { echo "Missing figure/averted.png"; exit 1; }
+	test -f "${TMP_DIR}/figure/yll.png" || { echo "Missing figure/yll.png"; exit 1; }
+	test -f "${TMP_DIR}/output/consolidated.rds" || { echo "Missing output/consolidated.rds"; exit 1; }
+	test -f "${TMP_DIR}/output/incidence.rds" || { echo "Missing output/incidence.rds"; exit 1; }
+	echo "==> Analysis verified successfully!"
+
+
 [doc('Remove development version of package')]
 remove:
 	R CMD REMOVE {{ PKG }}
