@@ -135,6 +135,7 @@ render: bootstrap-namespace
 site: bootstrap-namespace docs
 	#!/usr/bin/env Rscript
 	if (!requireNamespace("pkgdown", quietly = TRUE)) stop("missing 'pkgdown'")
+	options(pkgdown.internet = FALSE)
 	pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
 
 [group('site')]
@@ -146,6 +147,7 @@ site-quick: site
 site-full: bootstrap-namespace docs install
 	#!/usr/bin/env Rscript
 	if (!requireNamespace("pkgdown", quietly = TRUE)) stop("missing 'pkgdown'")
+	options(pkgdown.internet = FALSE)
 	pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
 
 [group('site')]
@@ -154,6 +156,7 @@ site-preview item="" port="8000": bootstrap-namespace docs
 	#!/usr/bin/env Rscript
 	if (!requireNamespace("pkgdown", quietly = TRUE)) stop("missing 'pkgdown'")
 	if (!requireNamespace("httpuv", quietly = TRUE)) stop("missing 'httpuv'")
+	options(pkgdown.internet = FALSE)
 
 	item <- trimws("{{ item }}")
 	port_num <- as.integer("{{ port }}")

@@ -11,7 +11,13 @@ The `paramix` package provides convenient functions to create both the correct a
 ## Installation
 
 ```r
-remotes::install_github("cmmid/paramix")
+install.packages("paramix")
+```
+
+Or install the development version from GitHub:
+
+```r
+remotes::install_github("accidda/paramix")
 ```
 
 ## Usage

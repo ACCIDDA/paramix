@@ -64,9 +64,9 @@ html[data-bs-theme="dark"] main img[src$=".svg"]:not(.accidda-footer-logo) {
     padding: 4px;
   }
 
-  html:not([data-bs-theme="light"]) .figure img:not([src$=".svg"]),
-  html:not([data-bs-theme="light"]) article img:not([src$=".svg"]),
-  html:not([data-bs-theme="light"]) main img:not(.accidda-footer-logo):not([src$=".svg"]) {
+  html:not([data-bs-theme="light"]) .figure img[src$=".svg"],
+  html:not([data-bs-theme="light"]) article img[src$=".svg"],
+  html:not([data-bs-theme="light"]) main img[src$=".svg"]:not(.accidda-footer-logo) {
     background-color: transparent;
     filter: invert(0.88) hue-rotate(180deg);
     border-radius: 4px;

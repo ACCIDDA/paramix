@@ -1,7 +1,14 @@
-url: https://cmmid.github.io/paramix/
+url: https://accidda.github.io/paramix/
 template:
   light-switch: true
   bootstrap: 5
+
+repo:
+  url:
+    home: https://github.com/accidda/paramix/
+    source: https://github.com/accidda/paramix/blob/HEAD/
+    issue: https://github.com/accidda/paramix/issues/
+    user: https://github.com/
 
 navbar:
   structure:
