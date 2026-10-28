@@ -26,7 +26,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">paramix</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -161,7 +161,7 @@ the analysis environment via <code>renv</code>. If the required analysis
 dependencies already reside in your active R library (for instance,
 during automated CI checks), <code>install.R</code> binds them as
 external libraries and avoids unnecessary reinstallation. Otherwise,
-<code>renv::restore()</code> installs missing dependencies. The analysis
+<code><a href="https://rstudio.github.io/renv/reference/restore.html" class="external-link">renv::restore()</a></code> installs missing dependencies. The analysis
 dependencies include <code>odin</code> for compartmental model
 compilation and <code>socialmixr</code> for contact matrix
 integration.</p>

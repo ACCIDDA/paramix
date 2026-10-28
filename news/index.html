@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">paramix</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,19 +41,40 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.3" id="paramix-003">paramix 0.0.3<a class="anchor" aria-label="anchor" href="#paramix-003"></a></h2>
+<div class="section level4">
+<h4 id="documentation-and-vignettes-0-0-3">Documentation and Vignettes<a class="anchor" aria-label="anchor" href="#documentation-and-vignettes-0-0-3"></a></h4>
+<ul><li>Added a dedicated vignette <code>reproducing-paper-analysis</code> describing how to run the simulation study from Goodfellow et al. (2025) <a href="doi:10.1371/journal.pcbi.1013420" class="uri">doi:10.1371/journal.pcbi.1013420</a>, including reference tables comparing calculated outputs with published findings.</li>
+<li>Updated package citation metadata in <code>DESCRIPTION</code> and <code>inst/CITATION</code> for the published <em>PLOS Computational Biology</em> paper.</li>
+<li>Extended and clarified mathematical formulations in roxygen documentation and vignettes.</li>
+<li>Added a package hex logo in <code>man/figures/logo.png</code> and configured pkgdown favicons with light/dark theme support.</li>
+<li>Removed generated documentation (<code>man/*.Rd</code>) and intermediate vignette outputs from version control, managing them dynamically through <code>just docs</code>.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="error-handling-and-validation-0-0-3">Error Handling and Validation<a class="anchor" aria-label="anchor" href="#error-handling-and-validation-0-0-3"></a></h4>
+<ul><li>Centralized user-facing error and warning signaling into reusable, named format templates in <code>R/messages.R</code>.</li>
+<li>Added comprehensive unit test coverage for all input validation and signaling paths in <code>tests/testthat/test-messages.R</code>.</li>
+<li>Integrated <code>roxyglobals</code> to automate global variable declarations in <code>R/globals.R</code>.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="demonstration-analysis-and-reproducibility-0-0-3">Demonstration Analysis and Reproducibility<a class="anchor" aria-label="anchor" href="#demonstration-analysis-and-reproducibility-0-0-3"></a></h4>
+<ul><li>Modernized the bundled analysis scripts in <code>inst/analysis/</code> to support updated demographic data (UN WPP 2022/2024) and modern <code>socialmixr</code> (&gt;= 0.5.0) contact matrix interfaces.</li>
+<li>Added automated numerical assertions in <code>inst/analysis/scripts/run_numbers.R</code> comparing calculated 65+ IFR increases, averted deaths, and averted YLLs directly against published benchmarks.</li>
+<li>Added <code>just test-analysis</code> workflow and a dedicated CI action to verify that the reproduction pipeline executes successfully.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="build-and-developer-workflows-0-0-3">Build and Developer Workflows<a class="anchor" aria-label="anchor" href="#build-and-developer-workflows-0-0-3"></a></h4>
+<ul><li>Standardized developer workflows via <code>justfile</code> recipes (<code>format</code>, <code>lint</code>, <code>docs</code>, <code>install</code>, <code>test</code>, <code>coverage</code>, <code>site</code>, <code>check</code>).</li>
+<li>Enforced code formatting via <code>air</code> and static linting via <code>lintr</code>.</li>
+<li>Modernized GitHub Actions CI workflows for multi-platform checks (Linux, macOS, Windows), automated linting, test coverage reporting, and automated pkgdown deployment.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.2" id="paramix-002">paramix 0.0.2<a class="anchor" aria-label="anchor" href="#paramix-002"></a></h2><p class="text-muted">CRAN release: 2025-06-10</p>
 <ul><li>Extended documentation to clarify mathematical formulation of the mixing table.</li>
-<li>Added package hex logo in <code>man/figures/logo.png</code> and configured pkgdown favicons with light/dark theme support.</li>
-<li>Modernized CI pipelines migrated from <code>imuMAP</code>, including multi-platform R CMD check (Linux, macOS, Windows), automated linting with <code>air</code> and <code>lintr</code>, code coverage via Codecov, and automated pkgdown deployment.</li>
-<li>Standardized error and warning signaling using centralized templates in <code>R/messages.R</code> with dedicated unit tests.</li>
-<li>Integrated <code>roxyglobals</code> to automate global variable declarations in <code>R/globals.R</code>.</li>
-<li>Removed generated documentation (<code>man/*.Rd</code>) and intermediate vignette outputs from version control, managing them as transient build products generated by <code>just docs</code>.</li>
-<li>Added standard <code>justfile</code> developer workflows (<code>format</code>, <code>lint</code>, <code>docs</code>, <code>install</code>, <code>test</code>, <code>coverage</code>, <code>site</code>, <code>check</code>).</li>
-<li>Cleaned up and added linting validation for demonstration analysis workflows in <code>inst/analysis/</code>.</li>
-<li>Added dedicated vignette <code>reproducing-paper-analysis</code> documenting how to run the simulation study from Goodfellow et al. (2025) <a href="doi:10.1371/journal.pcbi.1013420" class="uri">doi:10.1371/journal.pcbi.1013420</a>, with citation metadata in <code>DESCRIPTION</code> and <code>inst/CITATION</code>.</li>
-<li>Added CI action and <code>just test-analysis</code> workflow to verify that the bundled analysis pipeline runs and reproduces all outputs from the installed package.</li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

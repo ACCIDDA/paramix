@@ -82,9 +82,10 @@ When you invoke `make` for the first time, the `GNUmakefile` executes
 required analysis dependencies already reside in your active R library
 (for instance, during automated CI checks), `install.R` binds them as
 external libraries and avoids unnecessary reinstallation. Otherwise,
-`renv::restore()` installs missing dependencies. The analysis
-dependencies include `odin` for compartmental model compilation and
-`socialmixr` for contact matrix integration.
+[`renv::restore()`](https://rstudio.github.io/renv/reference/restore.html)
+installs missing dependencies. The analysis dependencies include `odin`
+for compartmental model compilation and `socialmixr` for contact matrix
+integration.
 
 ### Modernized R Package Dependencies and Numerical Verification
 
