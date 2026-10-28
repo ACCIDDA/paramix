@@ -98,6 +98,16 @@ test-analysis jobs="4": install
 	test -f "${TMP_DIR}/figure/yll.png" || { echo "Missing figure/yll.png"; exit 1; }
 	test -f "${TMP_DIR}/output/consolidated.rds" || { echo "Missing output/consolidated.rds"; exit 1; }
 	test -f "${TMP_DIR}/output/incidence.rds" || { echo "Missing output/incidence.rds"; exit 1; }
+	test -f "${TMP_DIR}/output/benchmark_comparison.rds" || { echo "Missing output/benchmark_comparison.rds"; exit 1; }
+
+	echo "==> Comparing reproduction numerical results with published benchmarks..."
+	Rscript -e '
+	  cmp <- readRDS(file.path(commandArgs(trailingOnly = TRUE)[1], "output", "benchmark_comparison.rds"))
+	  stopifnot("65+ IFR comparison failed" = isTRUE(all.equal(cmp$ifr$pct_calc, cmp$ifr$pct_increase)))
+	  stopifnot("Deaths averted comparison failed" = isTRUE(all.equal(cmp$deaths$pct_calc, cmp$deaths$pct_overestimate)))
+	  stopifnot("YLLs averted comparison failed" = isTRUE(all.equal(cmp$yll$pct_calc, cmp$yll$pct_overestimate)))
+	  message("All calculated reproduction outputs match published paper values within tolerance.")
+	' "${TMP_DIR}"
 	echo "==> Analysis verified successfully!"
 
 

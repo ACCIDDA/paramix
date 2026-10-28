@@ -30,12 +30,14 @@ analysis_pkgs <- c(
   "patchwork",
   "paramix"
 )
-missing_pkgs <- analysis_pkgs[!vapply(
-  analysis_pkgs,
-  requireNamespace,
-  logical(1),
-  quietly = TRUE
-)]
+missing_pkgs <- analysis_pkgs[
+  !vapply(
+    analysis_pkgs,
+    requireNamespace,
+    logical(1),
+    quietly = TRUE
+  )
+]
 
 if (length(missing_pkgs) > 0) {
   message(

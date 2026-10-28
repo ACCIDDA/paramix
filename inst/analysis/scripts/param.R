@@ -25,13 +25,14 @@ f_ifr <- ifr_opts[[match.arg(.args[4], names(ifr_opts))]]
 sim_pars <- disease_pars[[match.arg(.args[4], names(ifr_opts))]]
 
 model_agelimits <- c(0, 5, 20, 65, 101)
+contact_agelimits <- head(model_agelimits, -1)
 
 bound_pop_dt <- pop_dt[, .(
   from = c(from, max(from) + 1L),
   weight = c(weight, 0)
 )]
 
-survey_pop_dt <- bound_pop_dt[, .(
+survey_pop_dt <- pop_dt[, .(
   lower.age.limit = from,
   lower_age_limit = from,
   population = weight * 1e3
@@ -44,12 +45,12 @@ cm_args <- list(
 
 if ("survey_pop" %in% names(formals(socialmixr::contact_matrix))) {
   cm_args$survey_pop <- survey_pop_dt
-  cm_args$age_limits <- model_agelimits
+  cm_args$age_limits <- contact_agelimits
   cm_args$missing_participant_age <- "remove"
   cm_args$missing_contact_age <- "remove"
 } else {
   cm_args$survey.pop <- survey_pop_dt
-  cm_args$age.limits <- model_agelimits
+  cm_args$age.limits <- contact_agelimits
   cm_args$missing.participant.age <- "remove"
   cm_args$missing.contact.age <- "remove"
 }
