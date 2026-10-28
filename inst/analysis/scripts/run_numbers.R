@@ -179,10 +179,18 @@ published_deaths <- data.table(
   pathogen = rep(c("FLU", "FLU", "FLU", "SC2", "SC2", "SC2"), 2),
   intervention = rep(c("vax_older", "vax_working", "vax_young"), 4),
   pct_overestimate = c(
-    55.9, 24.7, 31.5,
-    45.7, 24.2, 39.9,
-    164.0, 39.7, 54.0,
-    173.0, 20.4, 96.3
+    55.9,
+    24.7,
+    31.5,
+    45.7,
+    24.2,
+    39.9,
+    164.0,
+    39.7,
+    54.0,
+    173.0,
+    20.4,
+    96.3
   )
 )
 
@@ -191,10 +199,18 @@ published_yll <- data.table(
   pathogen = c(rep("FLU", 6), rep("SC2", 6)),
   intervention = rep(c("vax_older", "vax_working", "vax_young"), 4),
   pct_overestimate = c(
-    76.5, 47.8, 38.8,
-    52.3, 42.8, 26.2,
-    99.0, 73.4, 77.1,
-    65.1, 89.0, 46.4
+    76.5,
+    47.8,
+    38.8,
+    52.3,
+    42.8,
+    26.2,
+    99.0,
+    73.4,
+    77.1,
+    65.1,
+    89.0,
+    46.4
   )
 )
 
@@ -237,16 +253,22 @@ comp_yll <- merge(
 
 # Assert that all calculated numbers match published benchmarks
 stopifnot(
-  "Calculated 65+ IFR increases do not match published benchmarks" =
-    isTRUE(all.equal(comp_ifr$pct_calc, comp_ifr$pct_increase))
+  "Calculated 65+ IFR increases do not match published benchmarks" = isTRUE(all.equal(
+    comp_ifr$pct_calc,
+    comp_ifr$pct_increase
+  ))
 )
 stopifnot(
-  "Calculated averted death overestimates do not match published benchmarks" =
-    isTRUE(all.equal(comp_deaths$pct_calc, comp_deaths$pct_overestimate))
+  "Calculated averted death overestimates do not match published benchmarks" = isTRUE(all.equal(
+    comp_deaths$pct_calc,
+    comp_deaths$pct_overestimate
+  ))
 )
 stopifnot(
-  "Calculated averted YLL overestimates do not match published benchmarks" =
-    isTRUE(all.equal(comp_yll$pct_calc, comp_yll$pct_overestimate))
+  "Calculated averted YLL overestimates do not match published benchmarks" = isTRUE(all.equal(
+    comp_yll$pct_calc,
+    comp_yll$pct_overestimate
+  ))
 )
 
 cat(
@@ -255,8 +277,11 @@ cat(
 )
 
 out_file <- file.path(dirname(.args[5]), "benchmark_comparison.rds")
-saveRDS(list(
-  ifr = comp_ifr,
-  deaths = comp_deaths,
-  yll = comp_yll
-), out_file)
+saveRDS(
+  list(
+    ifr = comp_ifr,
+    deaths = comp_deaths,
+    yll = comp_yll
+  ),
+  out_file
+)
