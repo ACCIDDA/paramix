@@ -4,7 +4,7 @@
     "Repositories": [
       {
         "Name": "CRAN",
-        "URL": "https://cloud.r-project.org"
+        "URL": "https://packagemanager.posit.co/cran/latest"
       }
     ]
   },
@@ -1749,7 +1749,7 @@
     },
     "socialmixr": {
       "Package": "socialmixr",
-      "Version": "0.4.0",
+      "Version": "0.7.0",
       "Source": "Repository",
       "Title": "Social Mixing Matrices for Infectious Disease Modelling",
       "Authors@R": "c( person(\"Sebastian\", \"Funk\", , \"sebastian.funk@lshtm.ac.uk\", role = c(\"aut\", \"cre\")), person(\"Lander\", \"Willem\", role = \"aut\"), person(\"Hugo\", \"Gruson\", role = \"aut\"), person(\"Maria\", \"Bekker-Nielsen Dunbar\", role = \"ctb\"), person(\"Carl A. B.\", \"Pearson\", role = \"ctb\"), person(\"Sam\", \"Clifford\", , \"sj.clifford@gmail.com\", role = \"ctb\"), person(\"Christopher\", \"Jarvis\", role = \"ctb\"), person(\"Alexis\", \"Robert\", , \"alexis.robert@lshtm.ac.uk\", role = \"ctb\"), person(\"Niel\", \"Hens\", role = \"ctb\"), person(\"Pietro\", \"Coletti\", role = c(\"col\", \"dtm\")) )",

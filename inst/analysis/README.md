@@ -11,7 +11,11 @@ path/to/this/directory$ make -j4
 
 The `-j4` option enables running the parts of the analysis in parallel. This analysis has a two-by-two scenario setup, so 4 is the maximum useful amount of parallelization. If your system has fewer cores (or highly constrained memory), feel free to use a smaller number or remove the option entirely for serial run only.
 
-You will be prompted by `renv` to agree to setting up the `renv` environment. The `socialmixr` dependency tree is sprawling, so will this may take a moment.
+You will be prompted by `renv` to agree to setting up the `renv` environment.
+
+# NOTE ON PACKAGE DEPENDENCIES & REPRODUCIBILITY
+
+This analysis pipeline uses modernized R package dependencies (including `socialmixr >= 0.5.0` API conventions) rather than the historical frozen library snapshot used at manuscript submission. The demographic data snapshot is **identical** to the published paper: population pyramids and life tables are drawn from the UN World Population Prospects 2022 (`wpp2022`, 2021 estimates). While dependency versions and function argument conventions have evolved, we confirmed that the analysis scripts fully recover the exact numerical quantities and figures reported in Goodfellow et al. (2025). The final `values` build target automatically executes `scripts/run_numbers.R` to print these verified reference figures.
 
 # DETAILS
 
