@@ -26,15 +26,36 @@ sim_pars <- disease_pars[[match.arg(.args[4], names(ifr_opts))]]
 
 model_agelimits <- c(0, 5, 20, 65, 101)
 
-# assume all age-contact patterns based off POLYMOD results
-cmij <- contact_matrix(
+bound_pop_dt <- pop_dt[, .(
+  from = c(from, max(from) + 1L),
+  weight = c(weight, 0)
+)]
+
+survey_pop_dt <- bound_pop_dt[, .(
+  lower.age.limit = from,
+  lower_age_limit = from,
+  population = weight * 1e3
+)]
+
+cm_args <- list(
   polymod,
-  survey.pop = pop_dt[, .(lower.age.limit = from, population = weight * 1e3)],
-  age.limits = model_agelimits,
-  missing.participant.age = "remove",
-  missing.contact.age = "remove",
   symmetric = TRUE
-)$matrix
+)
+
+if ("survey_pop" %in% names(formals(socialmixr::contact_matrix))) {
+  cm_args$survey_pop <- survey_pop_dt
+  cm_args$age_limits <- model_agelimits
+  cm_args$missing_participant_age <- "remove"
+  cm_args$missing_contact_age <- "remove"
+} else {
+  cm_args$survey.pop <- survey_pop_dt
+  cm_args$age.limits <- model_agelimits
+  cm_args$missing.participant.age <- "remove"
+  cm_args$missing.contact.age <- "remove"
+}
+
+# assume all age-contact patterns based off POLYMOD results
+cmij <- do.call(socialmixr::contact_matrix, cm_args)$matrix
 
 # for checking a high resolution approximation;
 # assume contacts are uniformly distributed
@@ -50,11 +71,6 @@ for (i in seq_along(widths)) {
     cmijfull[j, ] <- newrow
   }
 }
-
-bound_pop_dt <- pop_dt[, .(
-  from = c(from, max(from) + 1L),
-  weight = c(weight, 0)
-)]
 
 mapping_dt <- alembic(
   f_param = f_ifr,

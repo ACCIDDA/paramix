@@ -18,10 +18,44 @@ if (!is.null(repos) && length(repos) > 0 && !any(repos == "@CRAN@")) {
 
 renv::activate()
 
-# Restore analysis dependencies from renv.lock, excluding paramix which is
-# supplied via external host library from the local package build
-res <- renv::restore(exclude = "paramix", prompt = FALSE)
+# Verify whether required analysis packages are available in library paths
+analysis_pkgs <- c(
+  "data.table",
+  "countrycode",
+  "wpp2022",
+  "odin",
+  "socialmixr",
+  "ggh4x",
+  "ggplot2",
+  "patchwork",
+  "paramix"
+)
+missing_pkgs <- analysis_pkgs[!vapply(
+  analysis_pkgs,
+  requireNamespace,
+  logical(1),
+  quietly = TRUE
+)]
 
-if (exists("res")) {
-  print(res)
+if (length(missing_pkgs) > 0) {
+  message(
+    "Missing packages (",
+    paste(missing_pkgs, collapse = ", "),
+    "); restoring from lockfile..."
+  )
+  tryCatch(
+    res <- renv::restore(exclude = "paramix", prompt = FALSE),
+    error = function(e) {
+      warning(
+        "renv::restore() did not complete fully; relying on host packages: ",
+        conditionMessage(e)
+      )
+    }
+  )
+
+  if (exists("res")) {
+    print(res)
+  }
+} else {
+  message("All analysis dependencies already available in library paths.")
 }
