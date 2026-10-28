@@ -8,6 +8,12 @@ renv::settings$external.libraries(
   persist = TRUE
 )
 
+# If host environment has configured package repositories (e.g. PPM), allow renv to use them
+repos <- getOption("repos")
+if (!is.null(repos) && length(repos) > 0 && !any(repos == "@CRAN@")) {
+  options(renv.config.repos.override = repos)
+}
+
 renv::activate()
 tryCatch(
   res <- renv::restore(prompt = FALSE),
