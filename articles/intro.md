@@ -1,0 +1,474 @@
+# Introductory Usage: \`paramix\`
+
+The `paramix` package provides translation of parameters for use in
+compartmental models. Imagine you have compartments discretizing some
+feature – for example, converting ages into age categories – but a
+process that depends on that feature – for example, infection fatality
+ratio. How do you get the right aggregate parameter for each of the
+compartments? And once you get outcomes for your stratified
+compartments, is there anyway to impute their higher-resolution
+distribution?
+
+With `paramix`, you can
+[`blend()`](https://accidda.github.io/paramix/reference/blend.md) a
+parameter function into the correctly averaged values, and
+[`distill()`](https://accidda.github.io/paramix/reference/distill.md)
+outcomes to finer resolutions. These functions work via a mapping object
+created with
+[`alembic()`](https://accidda.github.io/paramix/reference/alembic.md).
+
+In this vignette, we demonstrate applying these functions from an
+initial functional relationship through a final analytic process. To
+call attention to the where the package fits in, we prepend `paramix::`;
+this is not required during actual use.
+
+### Motivating Example
+
+The SARS-COV-2 pathogen causes COVID-19, which has a distinctly
+age-specific mortality. In a meta-analysis, Levin et al[^1] estimated
+the age-specific infection-fatality ratio (IFR) for COVID-19 as:
+
+``` r
+
+ifr_levin <- function(age_in_years) {
+  (10^(-3.27 + 0.0524 * age_in_years)) / 100
+}
+```
+
+**Show plot code**
+
+``` r
+
+ggplot(
+  data.frame(x = 0:100, y = ifr_levin(0:100))
+) + aes(x, y) +
+  geom_line() +
+  scale_y_log10("Infection-fatality ratio") +
+  labs(x = "Age")
+```
+
+![](intro_files/figure-html/ifr-curve-1.png)
+
+To evaluate the threat of an infectious disease, researchers often
+calculate expected “years life lost” (YLLs). Based on age-specific
+mortality data, we can estimate how many years individuals at various
+ages can expect to live. People who die of a modelled illness lose a
+corresponding number of years of life, depending on their age at death.
+
+In this vignette, we will turn a continuous IFR relationship into
+compartmental aggregate IFR and deaths for broader age groups, back to
+age-specific deaths, and use these to estimate YLLs.
+
+### Parametrizing a Compartmental Model
+
+Typically, ODE compartmental models have low-resolution stratification
+combining several ages for a mix of computational reasons,
+data-availability on other interactions like contact patterns, and to
+match intervention targets (e.g. vaccinating children versus working age
+adults versus retirees).
+
+When mixing several ages into a single compartment, what is the properly
+aggregated value of parameters like the IFR? Generally,
+$`E\left[f\left(x\right)\right] \ne f\left(E\left[x\right]\right)`$, so
+using the IFR at the mean age for the compartment is not guaranteed to
+be correct. The average IFR over the age range is more reasonable, but
+that assumes a uniform distribution of individuals by age, which is not
+generally true. The proper average of IFR needs to be weighted by the
+age distribution, or:
+
+``` math
+\textrm{IFR}\Big\rvert_a^b = \frac{\int_a^b \textrm{IFR}(\textrm{age})\rho(\textrm{age})d\textrm{age}}{\int_a^b \rho(\textrm{age})d\textrm{age}}
+```
+
+We can compare the various calculations of the IFR for two different
+population age distributions: Afghanistan and the United Kingdom.
+Recall, we have considered using:
+
+- the average age in the function, i.e. $`\textrm{IFR}(\frac{a+b}{2})`$
+- the function average, assuming uniform age distribution,
+  i.e. $`\int_a^b \textrm{IFR}(\textrm{age}) d\textrm{age}`$
+- the weighted function average (as above)
+
+Let’s imagine a compartmental model with age groups \[0,5), \[5,20),
+\[20,65), and \[65,101\], corresponding roughly to pre-school age
+children, school age individuals, prime working age adults, and
+post-working age adults. First, we need to get the relevant values:
+
+``` r
+
+# our model age group cut points
+model_agelimits <- c(0, 5, 20, 65, 101)
+# get select data from World Population Prospects estimates
+data("popF", package = "wpp2019")
+data("popM", package = "wpp2019")
+
+pop_dt <- as.data.table(popF)[,
+  .(name, age, popF = `2020`)
+][
+  as.data.table(popM), on = c("name", "age"),
+  .(name, age, popF, popM = `2020`)
+][, age := as.integer(gsub("^(\\d+)[-+].*$", "\\1", age))][
+  name %like% "Afghanistan|United Kingdom"
+]
+
+density_dt <- pop_dt[,
+  .(
+    from = c(age, max(age) + 1),
+    weight = c(popF + popM, 0)
+  ), by = name
+]
+
+rm(popF)
+rm(popM)
+```
+
+We can calculate the IFR values for each model age group, under
+different approaches to computing them. We’ll use the package function
+[`parameter_summary()`](https://accidda.github.io/paramix/reference/parameter_summary.md),
+which provides a convenient comparison of the parameter values for these
+approaches to summarisation:
+
+``` r
+
+plot_dt <- density_dt[, { # compute parameters for each country of interest
+  paramix::parameter_summary(
+    f_param = ifr_levin, f_pop = .SD, model_agelimits
+  )
+}, by = name]
+```
+
+And plotting these different blends:
+
+**Show plot code**
+
+``` r
+
+sub_plot_dt <- plot_dt[
+  name == "Afghanistan" | method == "wm_f"
+][,
+  method := factor(fifelse(
+    method != "wm_f", as.character(method),
+    fifelse(name == "Afghanistan", "af_wm_f", "uk_wm_f")
+  ))
+][, .SD, .SDcols = -c("name")]
+# parameter_summary yields method in (f_val, f_mean, mean_f, wm_f)
+# with the exception of wm_f, these are independent of density, so we can drop
+# duplicates
+
+pop_p <- ggplot(density_dt[from != max(from)]) + aes(from, weight) +
+  geom_col(width = 5, just = 1) +
+  facet_grid(cols = vars(name)) +
+  scale_x_continuous("Age", expand = expansion()) +
+  scale_y_continuous("Population (thousands)") +
+  theme(panel.spacing.x = unit(1.5, "line"))
+
+ifr_p <- ggplot(sub_plot_dt[x <= density_dt[, max(from) - 1]]) +
+  aes(x = x, color = method, y = value) +
+  geom_line(data = \(dt) dt[method == "f_val"], lwd = 0.8, lty = "dotted") +
+  geom_step(data = \(dt) dt[method != "f_val"]) +
+  scale_color_discrete(
+    NULL,
+    breaks = sub_plot_dt[, value[.N], by = method][order(-V1), method],
+    labels = c(
+      f_val = "f(age)", f_mid = "f(mid(Age))",
+      mean_f = "E[f(age)]", f_mean = "f(E[age])",
+      af_wm_f = "AF-weighted E[f(age)]", uk_wm_f = "UK-weighted E[f(age)]"
+    )
+  ) +
+  scale_y_log10("Infection-fatality ratio", expand = expansion()) +
+  scale_x_continuous("Age", breaks = 10 * (0:10), expand = expansion()) +
+  theme(
+    legend.position = "inside", legend.position.inside = c(0.025, 1),
+    legend.justification.inside = c(0, 1)
+  )
+
+(pop_p / ifr_p) + plot_layout(heights = c(1, 2)) & theme(text = element_text(size = 10))
+```
+
+![](intro_files/figure-html/ifrfig-1.png)
+
+Clearly, these different approaches result in different mortality
+outcomes for otherwise identical infection patterns.
+
+### Typical Application
+
+In the previous section, we used a convenience method the package
+provides for plotting. More typically, you will want to use the three
+main functions in the package:
+
+- [`alembic()`](https://accidda.github.io/paramix/reference/alembic.md)
+  to make a weighted mapping from one resolution to another
+- [`blend()`](https://accidda.github.io/paramix/reference/blend.md) to
+  aggregate the associated weighted mixture parameters
+- [`distill()`](https://accidda.github.io/paramix/reference/distill.md)
+  to impute finer scale outcomes from model outputs
+
+Revisiting our previous example, the properly age-weighted IFRs look
+like:
+
+``` r
+
+# setup the model to outcome mapping using `alembic`s
+out_partition <- function(from, max_limit) {
+  res <- seq(min(from), max(from), by = 5L)
+  res[length(res)] <- max_limit
+  res
+}
+
+mapping_dt <- density_dt[,
+  paramix::alembic(
+    f_param = ifr_levin, f_pop = .SD,
+    model_partition = model_agelimits,
+    output_partition = out_partition(from, tail(model_agelimits, 1))
+  ),
+  by = name
+]
+
+params <- mapping_dt[, paramix::blend(.SD), by = name]
+```
+
+|          | Afghanistan | United Kingdom |
+|:---------|------------:|---------------:|
+| 0 - 4    |   0.0000074 |      0.0000074 |
+| 5 - 19   |   0.0000269 |      0.0000271 |
+| 20 - 64  |   0.0011908 |      0.0024191 |
+| 65 - 100 |   0.0444973 |      0.0831603 |
+
+These parameters are now weighted correctly for use in a model with
+those age groups and underlying populations. Once you run that model,
+you might want to disaggregate an outcome, such as for example
+converting deaths into years of life lost.
+
+In this example, since the IFR increases with age, deaths occurring in a
+wide age group are more likely to have occurred at the older end of the
+age group. We can compare a few approaches for calculating the
+distribution of deaths: we could assume that deaths occur
+
+- all at the middle age in the age group,
+- uniformly within the age group,
+- proportional to age distribution within the group,
+- proportional to age *and* relative mortality rates.
+
+For the last option, we can use Bayes’ theorem to calculate about the
+correct proportionality:
+
+``` math
+\textrm{P}\left(\textrm{Age} \vert \textrm{Death}\right) = \frac{\textrm{P}\left(\textrm{Death} \vert \textrm{Age}\right)\textrm{P}\left(\textrm{Age}\right)}{\textrm{P}\left(\textrm{Death}\right)}
+```
+
+We know that $`\textrm{P}\left(\textrm{Age}\right)`$ is the relative
+fraction of an age within any age group, and
+$`\frac{\textrm{P}\left(\textrm{Death} \vert \textrm{Age}\right)}{\textrm{P}\left(\textrm{Death}\right)}`$
+is the relative mortality rate for that age within that same age group.
+We can therefore use those terms to calculate
+$`\textrm{P}\left(\textrm{Age} \vert \textrm{Death}\right)`$, and
+allocate the mortality outcomes accordingly.
+
+For demonstration purposes, let’s assume that one million infections
+occur proportionally across the model population groups[^2]. Using our
+properly-weighted IFR values for each age group from above, these
+infections result in deaths as follows:
+
+``` r
+
+model_density_dt <- density_dt[, .(
+  model_partition = model_agelimits[findInterval(from, model_agelimits)],
+  weight
+), by = name][, .(weight = sum(weight)), by = .(name, model_partition)][,
+  weight := weight / sum(weight), by = name
+]
+model_deaths_dt <- model_density_dt[
+  params, on = .(name, model_partition)
+][,
+  .(name, model_partition, deaths = weight * 1e6 * value)
+]
+```
+
+|          | Afghanistan | United Kingdom |
+|:---------|------------:|---------------:|
+| 0 - 4    |    1.074175 |   4.261563e-01 |
+| 5 - 19   |   10.516660 |   4.698971e+00 |
+| 20 - 64  |  519.633628 |   1.408853e+03 |
+| 65 - 100 | 1178.763454 |   1.551218e+04 |
+
+How would these translate into age-specific deaths, based on these
+different calculation methods? For convenience, `paramix` can compute
+all approaches mentioned above for comparison:
+
+``` r
+
+distill_methods_dt <- model_deaths_dt[,
+  paramix::distill_summary(
+    mapping_dt[name == .BY],
+    .SD[, .(model_partition, value = deaths)]
+  ),
+  by = name
+]
+```
+
+You can see the calculations by entering
+[`paramix::distill_summary`](https://accidda.github.io/paramix/reference/distill_summary.md)
+(no parentheses) as an R prompt. Plotted, the results for the four
+different methods of calculation look like:
+
+**Show plot code**
+
+``` r
+
+distill_labels <- c(
+  f_mean = "Deaths at mean age",
+  f_mid = "Deaths uniform across age group",
+  wm_f = "paramix approach",
+  mean_f = "Deaths proportional to age distribution"
+)
+
+ggplot(distill_methods_dt) + aes(x = partition, y = value, color = method) +
+  facet_grid(. ~ name) +
+  geom_point() +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(1, 0),
+    legend.justification.inside = c(1, 0),
+    text = element_text(size = 10)
+  ) +
+  scale_y_log10("Deaths (log 10 scale)") +
+  scale_x_continuous("Age") +
+  scale_color_discrete(
+    "Method",
+    breaks = c(
+      "f_mid", "f_mean",
+      "mean_f", "wm_f"
+    ),
+    labels = function(b) {
+      distill_labels[as.character(b)]
+    }
+  )
+```
+
+![](intro_files/figure-html/alembicplot-1.png)
+
+When we combine these different deaths-by-age with life expectancy
+estimates, we see these differences in estimated years of life lost.
+Without the necessary adjustments for both age structure and mortality
+shape, we typically overestimate YLLs.
+
+**Show plot code**
+
+``` r
+
+data("mxF", package = "wpp2019")
+data("mxM", package = "wpp2019")
+life_expectancy_dt <- as.data.table(mxF)[,
+  .(name, age, mxF = `2020-2025`)
+][
+  as.data.table(mxM), on = c("name", "age"),
+  .(name, age, mxF, mxM = `2020-2025`)
+][
+  name %in% c("Afghanistan", "United Kingdom")
+][
+  pop_dt,
+  on = .(name, age),
+  .(name, age, mx = (mxF * popF + mxM * popM) / (popF + popM))
+]
+
+life_expectancy_dt[,
+  ax := 0.5
+][,
+  qx := fifelse(
+    age == max(age),
+    1,
+    c(diff(age), 0) * mx / (1 + c(diff(age), 0) * mx * (1 - ax))
+  )
+]
+life_expectancy_dt[age == 0, lx := 1000]
+life_expectancy_dt[, lx := {
+  tmp <- lx
+  for (i in 2:.N) {
+    tmp[i] <- (1 - qx[i - 1]) * tmp[i - 1]
+  }
+  pmax(tmp, 0)
+}, by = name]
+life_expectancy_dt[,
+  Lx := c(
+    tail(lx, -1) + head(ax, -1) * (head(lx, -1) - tail(lx, -1)),
+    tail(lx, 1)
+  ), by = name
+]
+life_expectancy_dt[, ex := rev(cumsum(rev(Lx) / 1000)), by = name]
+
+life_ex_interpolated_dt <- life_expectancy_dt[,
+  .(age = 0:100, ex = stats::approxfun(age, ex)(0:100)),
+  by = name
+]
+
+# because of the selected breakpoints, there are some half-ages, so will
+# linearly interpolate between the relevant ages
+expander <- distill_methods_dt[, .(
+  age = unique(partition[partition != round(partition)])
+), by = name][, .(
+  lower = floor(age), upper = ceiling(age), tar = age, index = seq_len(.N)
+), by = name]
+
+lower_dt <- life_ex_interpolated_dt[
+  expander, on = .(name, age = lower), .(name, index, age, ex)
+]
+upper_dt <- life_ex_interpolated_dt[
+  expander, on = .(name, age = upper), .(name, index, age, ex)
+]
+
+expand_dt <- lower_dt[
+  upper_dt, on = .(name, index)
+][expander, on = .(name, index)][, .(
+  age = tar,
+  ex = approxfun(c(age, i.age), c(ex, i.ex))(tar)
+), by = .(name, index)
+][, .(name, age, ex)]
+
+lex_dt <- rbind(
+  life_ex_interpolated_dt[, .(name, age, ex)],
+  expand_dt
+)
+
+yll_dt <- distill_methods_dt[
+  lex_dt, on = .(name, partition = age), nomatch = NULL
+][, .(YLL = sum(value * ex)), by = .(name, method)]
+
+yllord <- yll_dt[name == "Afghanistan", method[order(YLL)]]
+
+ggplot(yll_dt) + aes(x = name, y = YLL / 1e4, fill = method) +
+  geom_bar(position = "dodge", stat = "identity") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.1, 0.9),
+    legend.justification.inside = c(0, 1),
+    text = element_text(size = 8)
+  ) +
+  scale_fill_brewer(
+    "Method", palette = "Set1",
+    labels = function(b) {
+      distill_labels[as.character(b)]
+    }
+  ) +
+  labs(
+    x = "Country",
+    y = "YLLs per one million infections\n(10,000 person-years)"
+  )
+```
+
+![](intro_files/figure-html/figlex-1.png)
+
+## Summary
+
+Properly blending and distilling parameter values can make a relatively
+large difference when estimating outcomes that are non-linear, for
+example years-life-lost. This package can make doing that correctly
+relatively easy.
+
+[^1]: [Assessing the age specificity of infection fatality rates for
+    COVID-19: systematic review, meta-analysis, and public policy
+    implications](https://doi.org/10.1007/s10654-020-00698-1)
+
+[^2]: More typically, the distribution of infections would reflect other
+    factors such as varying contact patterns. How the infections are
+    actually distributed would determine the particular quantitative
+    differences for our demonstration, but not the qualitative point.

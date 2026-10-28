@@ -1,0 +1,200 @@
+# Reproducing the Paper Analysis
+
+## Overview
+
+We describe the methodology and implementation of `paramix` in:
+
+> Goodfellow L, Pearson CAB, Procter SR (2025). “paramix: An R package
+> for parameter discretisation in compartmental models, with application
+> to calculating years of life lost.” *PLOS Computational Biology*,
+> 21(9): e1013420. <https://doi.org/10.1371/journal.pcbi.1013420>
+
+In addition to the core package functions and introductory vignette,
+`paramix` bundles the complete reproduction pipeline used to run the
+simulation experiments, calculate years of life lost (YLLs), and
+generate all figures presented in the paper. We organize this pipeline
+into sequential stages coordinated via GNU Make and isolated with `renv`
+to guarantee reproducible package environments.
+
+## Prerequisites
+
+To run the reproduction pipeline, you need:
+
+1.  **R** (\>= 4.1.0)
+2.  **GNU Make** (or a compatible `make` utility)
+3.  The **renv** R package (install via `install.packages("renv")` if
+    not already installed)
+
+## Copying the Pipeline
+
+The pipeline files reside in the `analysis` directory of the installed
+`paramix` package. You can copy the complete pipeline to a working
+directory of your choice from an R session:
+
+``` r
+
+# Choose a destination directory
+destination <- file.path("~", "Downloads", "paramixdemo")
+
+if (!dir.exists(destination)) {
+  dir.create(destination, recursive = TRUE)
+}
+
+# Copy the bundled analysis files
+pipeline_dir <- system.file("analysis", package = "paramix")
+analysis_files <- list.files(
+  pipeline_dir,
+  full.names = TRUE,
+  recursive = FALSE,
+  include.dirs = TRUE
+)
+
+file.copy(from = analysis_files, to = destination, recursive = TRUE)
+```
+
+## Running the Analysis
+
+Navigate to the destination directory in your terminal:
+
+``` bash
+cd ~/Downloads/paramixdemo
+```
+
+Run the pipeline using `make`:
+
+``` bash
+make -j4
+```
+
+### Parallel Execution
+
+The `-j4` flag executes independent stages of the analysis concurrently
+across up to 4 CPU cores. The analysis evaluates a two-by-two scenario
+matrix (2 population pyramids $`\times`$ 2 disease profiles), making 4
+the maximum effective parallelization factor. If your system has fewer
+cores or constrained memory, reduce this number (e.g., `-j2`) or run
+serially (`make`).
+
+### Environment Initialization (`renv`)
+
+When you invoke `make` for the first time, the `GNUmakefile` executes
+`install.R` to initialize the analysis environment via `renv`. If the
+required analysis dependencies already reside in your active R library
+(for instance, during automated CI checks), `install.R` binds them as
+external libraries and avoids unnecessary reinstallation. Otherwise,
+`renv::restore()` installs missing dependencies. The analysis
+dependencies include `odin` for compartmental model compilation and
+`socialmixr` for contact matrix integration.
+
+### Modernized R Package Dependencies and Numerical Verification
+
+The bundled reproduction pipeline uses contemporary R package releases
+(specifically `socialmixr >= 0.5.0` API conventions) rather than the
+historical frozen library snapshot used during original manuscript
+development. The demographic data snapshot is **identical** to the
+published paper: we retrieve population pyramids and life expectancy
+tables from the UN World Population Prospects 2022 (`wpp2022`, 2021
+estimates) for Afghanistan (`AFG`) and the United Kingdom (`GBR`).
+
+While package versions and API signatures have evolved since the
+publication of Goodfellow et al. (2025), we confirmed that this
+modernized pipeline reproduces the reference numerical results to full
+precision. The tables below summarize these benchmark quantities for
+reader reference:
+
+#### Table 1: Benchmark 65+ Infection Fatality Ratios (IFRs)
+
+| Pathogen Scenario | Demographic Setting | Unweighted Mean IFR | `paramix` Integrated IFR | Relative Increase |
+|:---|:---|:--:|:--:|:--:|
+| Influenza (FLU) | LMIC (Afghanistan) | 3.22% | 4.38% | +35.9% |
+| Influenza (FLU) | HIC (United Kingdom) | 4.67% | 7.39% | +58.3% |
+| SARS-CoV-2 (SC2) | LMIC (Afghanistan) | 3.12% | 4.39% | +40.7% |
+| SARS-CoV-2 (SC2) | HIC (United Kingdom) | 4.75% | 8.23% | +73.2% |
+
+#### Table 2: Overestimate of Intervention Benefits under Naive Discretization
+
+| Evaluated Metric | Vaccination Strategy | HIC Influenza | HIC SARS-CoV-2 | LMIC Influenza | LMIC SARS-CoV-2 |
+|:---|:---|:--:|:--:|:--:|:--:|
+| **Deaths Averted** | Older Adults (65+) | +55.9% | +45.7% | +164.0% | +173.0% |
+|  | Working Age (20–64) | +24.7% | +24.2% | +39.7% | +20.4% |
+|  | Youth (0–19) | +31.5% | +39.9% | +54.0% | +96.3% |
+| **YLLs Averted** | Older Adults (65+) | +76.5% | +99.0% | +52.3% | +65.1% |
+|  | Working Age (20–64) | +47.8% | +73.4% | +42.8% | +89.0% |
+|  | Youth (0–19) | +38.8% | +77.1% | +26.2% | +46.4% |
+
+When you run the pipeline (`make` or `just test-analysis`), the final
+`values` target automatically executes `scripts/run_numbers.R` to
+compute and display these benchmark quantities.
+
+## Pipeline Architecture
+
+The `GNUmakefile` coordinates three distinct stages:
+
+### 1. Inputs (`input/`)
+
+The input stage retrieves demographic data, life expectancy tables, and
+pathogen parameters:
+
+- `scripts/population.R`: Retrieves demographic pyramids from the UN
+  World Population Prospects via `wpp2022` for Afghanistan (`AFG`) and
+  the United Kingdom (`GBR`).
+- `scripts/lex.R`: Pulls UN life expectancy tables to support YLL
+  calculations.
+- `scripts/disease_pars.R`: Prepares natural history parameters for
+  SARS-CoV-2 and Influenza scenarios.
+- `scripts/param.R`: Constructs parameter translation alembics across
+  the specified model partitions.
+
+Run only the input stage with:
+
+``` bash
+make allinputs
+```
+
+### 2. Simulations and Distillation (`output/`)
+
+The output stage runs the epidemiological models and applies outcome
+transformations:
+
+- `scripts/simulate.R` and `scripts/odin.R`: Simulates transmission
+  dynamics across compartments.
+- `scripts/distill.R`: Disaggregates coarse compartmental deaths back to
+  single years of age using
+  [`paramix::distill()`](https://accidda.github.io/paramix/reference/distill.md).
+- `scripts/yll.R`: Calculates years of life lost (YLLs) under naive,
+  midpoint, and `paramix` aggregation schemes.
+- `scripts/consolidate.R`: Consolidates summary metrics across all
+  scenario combinations.
+
+Run only through the simulation and distillation stages with:
+
+``` bash
+make allouts
+```
+
+### 3. Figures and Summary Statistics (`figure/`)
+
+The final stage reproduces the figures from Goodfellow et al. (2025):
+
+- `scripts/fig_incidence.R`: Epidemic curves across scenarios.
+- `scripts/fig_averted.R`: Averted burden and comparison across
+  aggregation schemes.
+- `scripts/fig_yll.R`: Age-stratified and total YLL comparisons.
+- `scripts/fig_fullsummary.R`: Composite summary figure.
+- `scripts/run_numbers.R`: Key numerical findings cited in the
+  publication text.
+
+Generate all figures with:
+
+``` bash
+make allfigs
+```
+
+## Cleaning Build Artifacts
+
+To remove generated inputs, outputs, figures, and the local `renv`
+library:
+
+``` bash
+make clean
+```

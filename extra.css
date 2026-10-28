@@ -1,0 +1,108 @@
+/* ACCIDDA footer logo: swap light/dark variants based on Bootstrap 5.3
+   colour mode (data-bs-theme) so pkgdown's light-switch toggles them
+   correctly. The "auto" mode falls back to the OS preference via
+   prefers-color-scheme. */
+
+.accidda-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.accidda-footer-logo {
+  height: 32px;
+  width: auto;
+  vertical-align: middle;
+}
+
+.accidda-footer-text {
+  margin-left: 0.5rem;
+}
+
+/* Default (light mode, no theme attribute): show light variant. */
+.accidda-footer-logo-dark { display: none; }
+.accidda-footer-logo-light { display: inline; }
+
+/* Explicit dark mode via the light-switch. */
+html[data-bs-theme="dark"] .accidda-footer-logo-light { display: none; }
+html[data-bs-theme="dark"] .accidda-footer-logo-dark { display: inline; }
+
+/* Auto mode: follow the OS preference, unless the user explicitly chose
+   light via the light-switch. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-bs-theme="light"]) .accidda-footer-logo-light { display: none; }
+  html:not([data-bs-theme="light"]) .accidda-footer-logo-dark { display: inline; }
+}
+
+/* Ensure plots in vignettes/articles remain clearly legible on dark mode */
+html[data-bs-theme="dark"] .figure img:not([src$=".svg"]),
+html[data-bs-theme="dark"] .r-plot img:not([src$=".svg"]),
+html[data-bs-theme="dark"] article img:not([src$=".svg"]),
+html[data-bs-theme="dark"] main img:not(.accidda-footer-logo):not([src$=".svg"]) {
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+/* Treat SVG diagrams with filter inversion for seamless dark mode blending */
+html[data-bs-theme="dark"] .figure img[src$=".svg"],
+html[data-bs-theme="dark"] article img[src$=".svg"],
+html[data-bs-theme="dark"] main img[src$=".svg"]:not(.accidda-footer-logo) {
+  background-color: transparent;
+  filter: invert(0.88) hue-rotate(180deg);
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-bs-theme="light"]) .figure img:not([src$=".svg"]),
+  html:not([data-bs-theme="light"]) .r-plot img:not([src$=".svg"]),
+  html:not([data-bs-theme="light"]) article img:not([src$=".svg"]),
+  html:not([data-bs-theme="light"]) main img:not(.accidda-footer-logo):not([src$=".svg"]) {
+    background-color: #ffffff;
+    border-radius: 4px;
+    padding: 4px;
+  }
+
+  html:not([data-bs-theme="light"]) .figure img[src$=".svg"],
+  html:not([data-bs-theme="light"]) article img[src$=".svg"],
+  html:not([data-bs-theme="light"]) main img[src$=".svg"]:not(.accidda-footer-logo) {
+    background-color: transparent;
+    filter: invert(0.88) hue-rotate(180deg);
+    border-radius: 4px;
+  }
+}
+
+/* Collapsible code blocks */
+.chunk-plot-first {
+  display: flex;
+  flex-direction: column;
+}
+
+.chunk-plot-first > details {
+  order: 2;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chunk-plot-first > .figure,
+.chunk-plot-first > p,
+.chunk-plot-first > img {
+  order: 1;
+}
+
+details {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+details summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  user-select: none;
+}
+
+details summary:hover {
+  text-decoration: underline;
+}
