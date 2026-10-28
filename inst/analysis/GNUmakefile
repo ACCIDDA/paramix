@@ -29,7 +29,7 @@ RENV = .Rprofile
 
 # build renv/library & other renv infrastructure
 ${RENV}: install.R
-	 Rscript --vanilla $^
+	 Rscript $^
 
 clean:
 	rm -rf ${RENV}
