@@ -97,6 +97,7 @@ int_dt[, place := fifelse(place == "AFG", "LMIC", "HIC")]
 
 melt_int_dt <- int_dt[method %in% c("f_mid", "wm_f")] |>
   dcast(place + pathogen + intervention ~ method, value.var = "averted_death")
+melt_int_dt[, pct_overestimate := signif(100 * (f_mid - wm_f) / wm_f, 3)]
 
 cat("% OVERESTIMATE BENEFIT (DEATHS AVERTED) COMPARED TO PARAMIX", "\n")
 for (plc in melt_int_dt[, unique(place)]) {
@@ -106,7 +107,7 @@ for (plc in melt_int_dt[, unique(place)]) {
       paste0(
         melt_int_dt[
           pathogen == path & place == plc,
-          setNames(signif(100 * (f_mid - wm_f) / wm_f, 3), intervention)
+          setNames(pct_overestimate, intervention)
         ],
         "%"
       ),
@@ -144,18 +145,19 @@ int_dt[,
 int_dt <- int_dt[sim_method == "wm_f"][, sim_method := NULL]
 int_dt[, place := fifelse(place == "AFG", "LMIC", "HIC")]
 
-melt_int_dt <- int_dt[method %in% c("mean_f", "wm_f")] |>
+melt_yll_dt <- int_dt[method %in% c("mean_f", "wm_f")] |>
   dcast(pathogen + place + intervention ~ method, value.var = "averted_yll")
+melt_yll_dt[, pct_overestimate := signif(100 * (mean_f - wm_f) / wm_f, 3)]
 
 cat("% OVERESTIMATE YLLS COMPARED TO PARAMIX", "\n")
-for (plc in melt_int_dt[, unique(place)]) {
-  for (path in melt_int_dt[, unique(pathogen)]) {
+for (plc in melt_yll_dt[, unique(place)]) {
+  for (path in melt_yll_dt[, unique(pathogen)]) {
     cat(path, " ", plc, ": [1] VAX OLDER [2] VAX WORKING [3] VAX YOUNG", "\n")
     cat(
       paste0(
-        melt_int_dt[
+        melt_yll_dt[
           pathogen == path & place == plc,
-          setNames(signif(100 * (mean_f - wm_f) / wm_f, 3), intervention)
+          setNames(pct_overestimate, intervention)
         ],
         "%"
       ),
@@ -164,3 +166,97 @@ for (plc in melt_int_dt[, unique(place)]) {
   }
   cat("\n")
 }
+
+# Published benchmarks from Goodfellow et al. (2025)
+published_ifr <- data.table(
+  place = c("LMIC", "LMIC", "HIC", "HIC"),
+  pathogen = c("FLU", "SC2", "FLU", "SC2"),
+  pct_increase = c(35.9, 40.7, 58.3, 73.2)
+)
+
+published_deaths <- data.table(
+  place = c(rep("HIC", 6), rep("LMIC", 6)),
+  pathogen = rep(c("FLU", "FLU", "FLU", "SC2", "SC2", "SC2"), 2),
+  intervention = rep(c("vax_older", "vax_working", "vax_young"), 4),
+  pct_overestimate = c(
+    55.9, 24.7, 31.5,
+    45.7, 24.2, 39.9,
+    164.0, 39.7, 54.0,
+    173.0, 20.4, 96.3
+  )
+)
+
+published_yll <- data.table(
+  place = c(rep("HIC", 3), rep("LMIC", 3), rep("HIC", 3), rep("LMIC", 3)),
+  pathogen = c(rep("FLU", 6), rep("SC2", 6)),
+  intervention = rep(c("vax_older", "vax_working", "vax_young"), 4),
+  pct_overestimate = c(
+    76.5, 47.8, 38.8,
+    52.3, 42.8, 26.2,
+    99.0, 73.4, 77.1,
+    65.1, 89.0, 46.4
+  )
+)
+
+calc_ifr <- ifr_dt[, .(
+  place,
+  pathogen,
+  pct_calc = signif(100 * (wm_f - f_mean) / f_mean, 3)
+)]
+setkey(calc_ifr, place, pathogen)
+setkey(published_ifr, place, pathogen)
+comp_ifr <- merge(calc_ifr, published_ifr, by = c("place", "pathogen"))
+
+calc_deaths <- melt_int_dt[, .(
+  place,
+  pathogen,
+  intervention,
+  pct_calc = pct_overestimate
+)]
+setkey(calc_deaths, place, pathogen, intervention)
+setkey(published_deaths, place, pathogen, intervention)
+comp_deaths <- merge(
+  calc_deaths,
+  published_deaths,
+  by = c("place", "pathogen", "intervention")
+)
+
+calc_yll <- melt_yll_dt[, .(
+  place,
+  pathogen,
+  intervention,
+  pct_calc = pct_overestimate
+)]
+setkey(calc_yll, place, pathogen, intervention)
+setkey(published_yll, place, pathogen, intervention)
+comp_yll <- merge(
+  calc_yll,
+  published_yll,
+  by = c("place", "pathogen", "intervention")
+)
+
+# Assert that all calculated numbers match published benchmarks
+stopifnot(
+  "Calculated 65+ IFR increases do not match published benchmarks" =
+    isTRUE(all.equal(comp_ifr$pct_calc, comp_ifr$pct_increase))
+)
+stopifnot(
+  "Calculated averted death overestimates do not match published benchmarks" =
+    isTRUE(all.equal(comp_deaths$pct_calc, comp_deaths$pct_overestimate))
+)
+stopifnot(
+  "Calculated averted YLL overestimates do not match published benchmarks" =
+    isTRUE(all.equal(comp_yll$pct_calc, comp_yll$pct_overestimate))
+)
+
+cat(
+  "\n==> Numerical verification successful:",
+  "all results match published benchmarks.\n"
+)
+
+out_file <- file.path(dirname(.args[5]), "benchmark_comparison.rds")
+saveRDS(list(
+  ifr = comp_ifr,
+  deaths = comp_deaths,
+  yll = comp_yll
+), out_file)
