@@ -21,8 +21,8 @@ jobs:
       - name: Setup paramix CI environment
         uses: ./.github/actions/setup-paramix
         with:
-          extra-packages: any::countrycode, any::ggh4x, any::odin, any::socialmixr, any::renv, any::PPgp/wpp2022
-          needs: analysis
+          extra-packages: any::renv
+          needs: check
           bootstrap-namespace: 'true'
           generate-docs: 'true'
 

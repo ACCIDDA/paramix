@@ -46,10 +46,3 @@ URL: https://accidda.github.io/paramix/, https://doi.org/10.1371/journal.pcbi.10
 BugReports: https://github.com/accidda/paramix/issues
 Config/roxyglobals/filename: globals.R
 Config/roxyglobals/unique: FALSE
-Config/Needs/analysis: 
-    countrycode,
-    ggh4x,
-    odin,
-    renv,
-    socialmixr,
-    wpp2022
