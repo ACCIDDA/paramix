@@ -17,8 +17,8 @@ knitr::opts_chunk$set(
   fig.height = 5,
   dev.args = list(bg = "white")
 )
-if (requireNamespace("thematic", quietly = TRUE)) {
-  thematic::thematic_off()
+if (isNamespaceLoaded("thematic")) {
+  getFromNamespace("thematic_off", "thematic")()
 }
 ```
 
