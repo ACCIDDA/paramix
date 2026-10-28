@@ -9,17 +9,27 @@
 
 0 errors | 0 warnings | 0 notes
 
-## Release summary (0.0.2)
+## Release summary (0.0.3)
 
-This release provides documentation enhancements, build infrastructure improvements, and code quality updates:
+This is a patch release providing documentation enhancements, centralized error signaling, reproducible paper analysis validation, and modernized build infrastructure.
 
-* Extended and clarified mathematical formulations in roxygen documentation and vignettes.
-* Integrated package logo and generated favicons for pkgdown documentation.
-* Standardized error and warning messages with centralized formatting and dedicated unit tests.
-* Modernized build infrastructure using `justfile`, automated formatting with `air`, and comprehensive `lintr` rules.
-* Updated CI pipelines to multi-platform checks (Linux, macOS, Windows) and automated documentation deployment.
-* Removed generated documentation (`man/*.Rd`) and intermediate vignette render files from version control, managing them dynamically through `roxygen2` and `roxyglobals`.
-* Added dedicated vignette `reproducing-paper-analysis` and citation metadata (`inst/CITATION` and `DESCRIPTION`) for Goodfellow et al. (2025) <doi:10.1371/journal.pcbi.1013420>.
-* Added verification workflow and CI action (`just test-analysis`) for the bundled demonstration analysis.
+### Documentation and Vignettes
+* Added dedicated vignette `reproducing-paper-analysis` describing how to run the simulation study from Goodfellow et al. (2025) <doi:10.1371/journal.pcbi.1013420>, including numerical comparison tables against published benchmarks.
+* Updated package citation metadata in `DESCRIPTION` and `inst/CITATION` for the published *PLOS Computational Biology* paper.
+* Extended and clarified mathematical formulations in roxygen documentation and package vignettes.
+* Added package hex logo and configured pkgdown favicons with light/dark theme support.
+* Removed pre-rendered documentation and intermediate vignette assets from version control, managing them dynamically via `roxygen2`.
 
+### Error Handling and Testing
+* Centralized error and warning signaling into named format templates in `R/messages.R`.
+* Added comprehensive unit test coverage for all input validation and signaling paths in `tests/testthat/test-messages.R`.
 
+### Demonstration Analysis and Reproducibility
+* Modernized the bundled simulation analysis in `inst/analysis/` to support updated demographic data (UN WPP 2022/2024) and recent `socialmixr` (>= 0.5.0) contact matrix interfaces.
+* Added automated numerical verification assertions in `inst/analysis/scripts/run_numbers.R` to ensure simulation results match published findings.
+* Added automated CI verification recipe (`just test-analysis`) ensuring the demonstration analysis runs cleanly from the installed package.
+
+### Build and CI Infrastructure
+* Modernized developer workflows using `justfile`, automated code formatting via `air`, and linting via `lintr`.
+* Integrated `roxyglobals` to automate global variable binding declarations in `R/globals.R`.
+* Updated GitHub Actions CI workflows for multi-platform checks (Linux, macOS, Windows) and automated documentation deployment.
