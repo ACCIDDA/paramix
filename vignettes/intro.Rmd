@@ -23,8 +23,8 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
-if (requireNamespace("thematic", quietly = TRUE)) {
-  thematic::thematic_off()
+if (isNamespaceLoaded("thematic")) {
+  getFromNamespace("thematic_off", "thematic")()
 }
 
 # Define a knitr hook to fold source code into a <details> block below the plot
