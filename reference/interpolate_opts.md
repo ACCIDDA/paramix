@@ -109,7 +109,7 @@ interpolate_opts(
 #>         res
 #>     }
 #> }
-#> <bytecode: 0x5633042ca5f0>
+#> <bytecode: 0x5591be6b11b0>
 #> <environment: namespace:stats>
 #> 
 #> $kind
@@ -166,7 +166,7 @@ interpolate_opts(
 #>     function(v) .approxfun(x, y, v, method, yleft, yright, f, 
 #>         na.rm)
 #> }
-#> <bytecode: 0x56330481c210>
+#> <bytecode: 0x5591bebfa998>
 #> <environment: namespace:stats>
 #> 
 #> $kind
