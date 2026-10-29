@@ -1,4 +1,11 @@
-# paramix
+# paramix <img src="man/figures/logo.png" align="right" height="139" alt="paramix logo" />
+
+<!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/paramix)](https://CRAN.R-project.org/package=paramix)
+[![R-CMD-check](https://github.com/accidda/paramix/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/accidda/paramix/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/accidda/paramix/branch/main/graph/badge.svg)](https://app.codecov.io/gh/accidda/paramix)
+[![DOI](https://img.shields.io/badge/DOI-10.1371%2Fjournal.pcbi.1013420-blue.svg)](https://doi.org/10.1371/journal.pcbi.1013420)
+<!-- badges: end -->
 
 Tools for calculating aggregate parameters and for disaggregating outcomes.
 
