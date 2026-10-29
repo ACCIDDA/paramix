@@ -21,6 +21,7 @@
 ^\.cursor$
 ^CRAN-SUBMISSION$
 ^cran-comments\.md$
+^LICENSE\.md$
 ^doc$
 ^Meta$
 ^inst/analysis/renv/library

@@ -7,7 +7,18 @@
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
+
+* checking CRAN incoming feasibility ... NOTE
+  Maintainer: 'Carl Pearson <carl.ab.pearson@gmail.com>'
+  Possibly misspelled words in DESCRIPTION:
+  - Goodfellow (author surname in literature citation)
+  - al, et (from Latin phrase 'et al.' in literature citation)
+
+  These terms are valid proper names and standard citation abbreviations; they have been recorded in inst/WORDLIST.
+
+* Non-standard file/directory found at top level: 'LICENSE.md'
+  Added `^LICENSE\.md$` to `.Rbuildignore` to ensure only the standard template `LICENSE` file is bundled in the source package.
 
 ## Release summary (0.0.3)
 
@@ -23,6 +34,7 @@ This is a patch release providing documentation enhancements, centralized error 
 ### Error Handling and Testing
 * Centralized error and warning signaling into named format templates in `R/messages.R`.
 * Added comprehensive unit test coverage for all input validation and signaling paths in `tests/testthat/test-messages.R`.
+* Added package spell checking test harness in `tests/spelling.R` with dictionary in `inst/WORDLIST`.
 
 ### Demonstration Analysis and Reproducibility
 * Modernized the bundled simulation analysis in `inst/analysis/` to support updated demographic data (UN WPP 2022/2024) and recent `socialmixr` (>= 0.5.0) contact matrix interfaces.

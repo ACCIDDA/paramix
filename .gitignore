@@ -1,3 +1,6 @@
+# Test artifacts
+tests/*.Rout*
+
 # History files
 .Rhistory
 .Rapp.history

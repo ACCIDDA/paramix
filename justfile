@@ -61,9 +61,15 @@ coverage: bootstrap-namespace
 	if (require(covr)) print(covr::package_coverage()) else stop("missing 'covr'")
 
 [doc('Check spelling across documentation and vignettes using spelling')]
-spell: bootstrap-namespace
+spell: bootstrap-namespace docs
 	#!/usr/bin/env Rscript
-	if (require(spelling)) spelling::spell_check_package() else stop("missing 'spelling'")
+	if (!require(spelling)) stop("missing 'spelling'")
+	errs <- spelling::spell_check_package()
+	if (nrow(errs) > 0) {
+	  print(errs)
+	  stop(sprintf("%d possible spelling error(s) identified. Add valid words to inst/WORDLIST.", nrow(errs)))
+	}
+	message("No spelling errors found.")
 
 [doc('Install development version of package')]
 install: bootstrap-namespace docs

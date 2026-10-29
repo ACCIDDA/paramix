@@ -24,6 +24,7 @@
 
 * Standardized developer workflows via `justfile` recipes (`format`, `lint`, `docs`, `install`, `test`, `coverage`, `site`, `check`).
 * Enforced code formatting via `air` and static linting via `lintr`.
+* Added automated package spell checking via `tests/spelling.R` and `inst/WORDLIST`.
 * Modernized GitHub Actions CI workflows for multi-platform checks (Linux, macOS, Windows), automated linting, test coverage reporting, and automated pkgdown deployment.
 
 # paramix 0.0.2
