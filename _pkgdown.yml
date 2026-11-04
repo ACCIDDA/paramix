@@ -13,7 +13,7 @@ repo:
 navbar:
   structure:
     left: [intro, articles, reference, news]
-    right: [github, lightswitch]
+    right: [search, github, lightswitch]
 
 authors:
   sidebar:
