@@ -45,7 +45,7 @@ runs:
         echo "LDFLAGS += -L${GETTEXT_PREFIX}/lib -L/opt/homebrew/lib" >> ~/.R/Makevars
 
     - name: Setup just
-      uses: extractions/setup-just@v2
+      uses: extractions/setup-just@v4
 
     - name: Setup air
       uses: posit-dev/setup-air@v1
