@@ -2,6 +2,8 @@
 
 ## paramix 0.0.3
 
+CRAN release: 2026-10-29
+
 #### Documentation and Vignettes
 
 - Added a dedicated vignette `reproducing-paper-analysis` describing how
